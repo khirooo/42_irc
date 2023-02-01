@@ -25,10 +25,7 @@ public:
 	~Server();
 
 	void	initilize(void);
+	void	start(void);
 };
-
-
-
-
 
 #endif
