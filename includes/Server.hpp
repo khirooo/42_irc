@@ -29,8 +29,9 @@ public:
 
 	void	initilize(void);
 	void	start(void);
-	void	accept_connection();
+	void	accept_connection(void);
 	void	handel_message(struct pollfd* pfds_arr, int i);
+	void	handel_command(void);
 };
 
 #endif

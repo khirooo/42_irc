@@ -123,7 +123,7 @@ void	Server::start(void)
 	}
 }
 
-void	Server::accept_connection()
+void	Server::accept_connection(void)
 {
 	int						new_sock;
 	struct sockaddr_storage	client_addr;
@@ -159,9 +159,11 @@ void	Server::handel_message(struct pollfd* pfds_arr, int i)
 		//NOTE : remove it from pfd_arr ...
 	}
 	else
-	{
-		std::cout << "Recived message: " << _buffer << std::endl;	
-	}
+		handel_command();
 }
 
+void	Server::handel_command(void)
+{
+	
+}
 
