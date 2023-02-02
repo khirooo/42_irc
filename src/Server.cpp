@@ -25,7 +25,6 @@ void	Server::initilize(void)
 	int	exit_code;
 	int	yes = 1;
 	struct addrinfo hints, *servAddr, *p;
-	_port = "6667";
 
 	//-- filling some hints for getaddrinfo so that it generates a addinfo struct for me
 	memset(&hints, 0, sizeof(hints));
@@ -59,12 +58,15 @@ void	Server::initilize(void)
 		}
 
 		//bind the socket
-		if (bind(_svrSk, p->ai_addr, p->ai_addrlen))
+		exit_code = bind(_svrSk, p->ai_addr, p->ai_addrlen);
+		if (exit_code)
 		{
 			std::cerr << "Error: bind " << strerror(errno) << std::endl;
 			close(_svrSk);
 			continue;
 		}
+		else
+			std::cout << "binded the server socket " << _svrSk << " with the port " << _port << std::endl;
 		
 		break; //success
 	}
@@ -85,22 +87,55 @@ void	Server::initilize(void)
 void	Server::start(void)
 {
 	int	exit_code;
+	int	size = _pfds.size();
 
+
+
+	//////
+	struct sockaddr_storage address;
+	socklen_t address_len = sizeof(address);
+
+	if (getsockname(_svrSk, (struct sockaddr *) &address, &address_len) == -1) {
+		perror("getsockname");
+		exit(EXIT_FAILURE);
+	}
+
+	char host[NI_MAXHOST];
+	char service[NI_MAXSERV];
+
+	if (getnameinfo((struct sockaddr *) &address, address_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
+		printf("Listening on host=%s, port=%s\n", host, service);
+	} else {
+		perror("getnameinfo");
+		exit(EXIT_FAILURE);
+	}
+
+
+
+	/////
 	while (true)
 	{
-		struct pollfd* pfds_arr = new struct pollfd[_pfds.size()];
-		if (poll(pfds_arr, _pfds.size(), -1)) //block indefinitely
+		struct pollfd* pfds_arr = new struct pollfd[size];
+		std::copy(_pfds.begin(), _pfds.end(), pfds_arr);
+		std::cout << "before poll " << _svrSk << "  " << pfds_arr[0].events <<  std::endl;
+		exit_code = poll(pfds_arr, size, -1);
+		if (exit_code == -1) //block indefinitely
 		{
 			std::cerr << "Error: poll " << strerror(errno) << std::endl;
 			exit(1); //!!!! handel ur shit here
 		}
-
-		//loop throught the pfds and check the events
-		for(int i = 0; i < _pfds.size(); i++)
+		else
+		{
+			std::cerr << "Error: poll timeout" << std::endl;
+		}
+		std::cout << "after poll" << std::endl;
+		//loop throught the pfds and check the events NOTE: break at poll return (faster!)
+		for(int i = 0; i < size; i++)
 		{
 			if (pfds_arr[i].revents & POLLIN) //we got an event here!
 			{
-				if (pfds_arr[i].fd = _svrSk) //it's a new conncetion SO EXCITTEDDDD!!
+				std::cout << "new event happend \n";
+				if (pfds_arr[i].fd == _svrSk) //it's a new conncetion SO EXCITTEDDDD!!
 				{
 					int						new_sock;
 					struct sockaddr_storage	client_addr;
@@ -112,6 +147,8 @@ void	Server::start(void)
 						std::cerr << "Error: accept " << std::strerror(errno) << std::endl;
 						continue; //not gonna shut down the server for one fucker
 					}
+					else
+						std::cout << "new connection so Excitedd!" << std::endl;
 					struct pollfd pfd;
 					pfd.fd = new_sock;
 					pfd.events = POLLIN;
@@ -120,10 +157,26 @@ void	Server::start(void)
 				}
 				else //it's a new message from a client
 				{
-					recive the message and handel it ,,,,
+					exit_code = recv(pfds_arr[i].fd, _buffer, BUFFER_SIZE, 0); //flags = MSG_DONTWAIT might be faster ...
+					
+					if (exit_code <= 0) //connection closed or fail
+					{
+						if (exit_code == 0)
+							std::cout << "Connection closed\n";
+						else if (exit_code == -1)
+							std::cerr << "Error: recv " << std::strerror(errno) << std::endl;
+						close(pfds_arr[i].fd); //chuss
+						_pfds.erase(_pfds.begin() + i);
+						//NOTE : remove it from pfd_arr ...
+					}
+					else
+					{
+						std::cout << "Recived message: " << _buffer << std::endl;	
+					}
 				}
 			}
 		}
+		delete[] pfds_arr;
 	}
 	
 }
