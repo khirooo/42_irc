@@ -9,6 +9,7 @@
 #include <cerrno>
 #include <cstring>
 #include <cstdio>
+#include <fcntl.h>
 
 Server::Server(string pass, string port)
 :
@@ -68,7 +69,6 @@ void	Server::initilize(void)
 		}
 		else
 			std::cout << "binded the server socket " << _svrSk << " with the port " << _port << std::endl;
-		
 		break; //success
 	}
 	freeaddrinfo(servAddr);
@@ -76,6 +76,12 @@ void	Server::initilize(void)
 	{
 		std::cerr << "Error: not able to bind a socket ... tneket" << std::endl;
 		exit (1); //!!!! handel ur shit here
+	}
+	//listen to the socket dumb fuck
+	if (listen(_svrSk, 10) == -1)
+	{
+		std::cerr << "Error: listen " << std::strerror(errno) << std::endl;
+		exit(1); //!!!! handel ur shit
 	}
 	//--adding server socket to pollfd array
 	struct pollfd	pfd;
@@ -88,110 +94,74 @@ void	Server::initilize(void)
 void	Server::start(void)
 {
 	int	exit_code;
-	int	size = _pfds.size();
 
-
-
-	//////
-	struct sockaddr_storage address;
-	socklen_t address_len = sizeof(address);
-
-	if (getsockname(_svrSk, (struct sockaddr *) &address, &address_len) == -1) {
-		std::cerr << "getsockname" << std::endl;
-		exit(EXIT_FAILURE);
-	}
-
-	char host[NI_MAXHOST];
-	char service[NI_MAXSERV];
-
-	if (getnameinfo((struct sockaddr *) &address, address_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
-		std::cout << "Listening on host= " << host << ", " << service << std::endl;
-	} else {
-		std::cerr <<"getnameinfo" << std::endl;
-		exit(EXIT_FAILURE);
-	}
-
-
-	/////
 	while (true)
 	{
+		int	size = _pfds.size();
 		struct pollfd* pfds_arr = new struct pollfd[size];
 		std::copy(_pfds.begin(), _pfds.end(), pfds_arr);
-		if (pfds_arr[0].revents & POLLHUP)
-			std::cout << "Mel bedya m9awda \n";
-		std::cout << "before poll: sockedID " << _svrSk << " events " << pfds_arr[0].events  << " revent "<< pfds_arr[0].revents << std::endl;
-		exit_code = poll(pfds_arr, size, -1);
-		if (exit_code == -1) //block indefinitely
+		std::cout << "_____POLL____"<< size << "____" << std::endl ;
+		exit_code = poll(pfds_arr, size, -1);//block indefinitely
+		if (exit_code == -1)
 		{
 			std::cerr << "Error: poll " << strerror(errno) << std::endl;
 			exit(1); //!!!! handel ur shit here
 		}
-		else
-		{
-			std::cerr << "Error: poll timeout " << exit_code << " erron " << errno<< std::endl;
-		}
-		std::cout << "after poll" << std::endl;
-		getchar();
+
 		//loop throught the pfds and check the events NOTE: break at poll return (faster!)
 		for(int i = 0; i < size; i++)
 		{
-			if (pfds_arr[i].revents & POLLERR)
-			{
-				std::cout << "there was an erro" << std::endl;
-			}
-			if (pfds_arr[i].revents & POLLOUT)
-			{
-				std::cout << "there was an poull out" << std::endl;
-			}
-			if (pfds_arr[i].revents & POLLHUP)
-			{
-				std::cout << "there was an POLLHUP" << std::endl;
-			}
 			if (pfds_arr[i].revents & POLLIN) //we got an event here!
 			{
-				std::cout << "new event happend \n";
 				if (pfds_arr[i].fd == _svrSk) //it's a new conncetion SO EXCITTEDDDD!!
-				{
-					int						new_sock;
-					struct sockaddr_storage	client_addr;
-					socklen_t				new_sock_len = sizeof(client_addr);
-					
-					new_sock = accept(_svrSk, (sockaddr*)&client_addr, &new_sock_len); //welcome b*t*h
-					if (new_sock == -1)
-					{
-						std::cerr << "Error: accept " << std::strerror(errno) << std::endl;
-						continue; //not gonna shut down the server for one fucker
-					}
-					else
-						std::cout << "new connection so Excitedd!" << std::endl;
-					struct pollfd pfd;
-					pfd.fd = new_sock;
-					pfd.events = POLLIN;
-					_pfds.push_back(pfd);
-					//NOTE : u might need to update the array here ! if u want ur server to be fast
-				}
+					accept_connection();
 				else //it's a new message from a client
-				{
-					exit_code = recv(pfds_arr[i].fd, _buffer, BUFFER_SIZE, 0); //flags = MSG_DONTWAIT might be faster ...
-					
-					if (exit_code <= 0) //connection closed or fail
-					{
-						if (exit_code == 0)
-							std::cout << "Connection closed\n";
-						else if (exit_code == -1)
-							std::cerr << "Error: recv " << std::strerror(errno) << std::endl;
-						close(pfds_arr[i].fd); //chuss
-						_pfds.erase(_pfds.begin() + i);
-						//NOTE : remove it from pfd_arr ...
-					}
-					else
-					{
-						std::cout << "Recived message: " << _buffer << std::endl;	
-					}
-				}
+					handel_message(pfds_arr, i);
 			}
 		}
 		delete[] pfds_arr;
 	}
-	
 }
+
+void	Server::accept_connection()
+{
+	int						new_sock;
+	struct sockaddr_storage	client_addr;
+	socklen_t				new_sock_len = sizeof(client_addr);
+
+	new_sock = accept(_svrSk, (sockaddr*)&client_addr, &new_sock_len); //welcome b*t*h
+	if (new_sock == -1)
+		std::cerr << "Error: accept " << std::strerror(errno) << std::endl;
+	else
+		std::cout << "new connection so Excitedd!" << std::endl;
+	struct pollfd pfd;
+	pfd.fd = new_sock;
+	pfd.events = POLLIN;
+	_pfds.push_back(pfd);
+	//NOTE : u might need to update the array here ! if u want ur server to be fast
+}
+
+void	Server::handel_message(struct pollfd* pfds_arr, int i)
+{
+	int	exit_code;
+
+	memset(_buffer, 0, BUFFER_SIZE);
+	exit_code = recv(pfds_arr[i].fd, _buffer, BUFFER_SIZE, 0); //flags = MSG_DONTWAIT might be faster ...
+
+	if (exit_code <= 0) //connection closed or fail
+	{
+		if (exit_code == 0)
+			std::cout << "Connection closed\n";
+		else if (exit_code == -1)
+			std::cerr << "Error: recv " << std::strerror(errno) << std::endl;
+		close(pfds_arr[i].fd); //chuss
+		_pfds.erase(_pfds.begin() + i);
+		//NOTE : remove it from pfd_arr ...
+	}
+	else
+	{
+		std::cout << "Recived message: " << _buffer << std::endl;	
+	}
+}
+
+
