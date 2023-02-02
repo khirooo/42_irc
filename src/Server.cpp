@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <cerrno>
 #include <cstring>
+#include <cstdio>
 
 Server::Server(string pass, string port)
 :
@@ -96,7 +97,7 @@ void	Server::start(void)
 	socklen_t address_len = sizeof(address);
 
 	if (getsockname(_svrSk, (struct sockaddr *) &address, &address_len) == -1) {
-		perror("getsockname");
+		std::cerr << "getsockname" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -104,12 +105,11 @@ void	Server::start(void)
 	char service[NI_MAXSERV];
 
 	if (getnameinfo((struct sockaddr *) &address, address_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
-		printf("Listening on host=%s, port=%s\n", host, service);
+		std::cout << "Listening on host= " << host << ", " << service << std::endl;
 	} else {
-		perror("getnameinfo");
+		std::cerr <<"getnameinfo" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-
 
 
 	/////
@@ -117,7 +117,9 @@ void	Server::start(void)
 	{
 		struct pollfd* pfds_arr = new struct pollfd[size];
 		std::copy(_pfds.begin(), _pfds.end(), pfds_arr);
-		std::cout << "before poll " << _svrSk << "  " << pfds_arr[0].events <<  std::endl;
+		if (pfds_arr[0].revents & POLLHUP)
+			std::cout << "Mel bedya m9awda \n";
+		std::cout << "before poll: sockedID " << _svrSk << " events " << pfds_arr[0].events  << " revent "<< pfds_arr[0].revents << std::endl;
 		exit_code = poll(pfds_arr, size, -1);
 		if (exit_code == -1) //block indefinitely
 		{
@@ -126,12 +128,25 @@ void	Server::start(void)
 		}
 		else
 		{
-			std::cerr << "Error: poll timeout" << std::endl;
+			std::cerr << "Error: poll timeout " << exit_code << " erron " << errno<< std::endl;
 		}
 		std::cout << "after poll" << std::endl;
+		getchar();
 		//loop throught the pfds and check the events NOTE: break at poll return (faster!)
 		for(int i = 0; i < size; i++)
 		{
+			if (pfds_arr[i].revents & POLLERR)
+			{
+				std::cout << "there was an erro" << std::endl;
+			}
+			if (pfds_arr[i].revents & POLLOUT)
+			{
+				std::cout << "there was an poull out" << std::endl;
+			}
+			if (pfds_arr[i].revents & POLLHUP)
+			{
+				std::cout << "there was an POLLHUP" << std::endl;
+			}
 			if (pfds_arr[i].revents & POLLIN) //we got an event here!
 			{
 				std::cout << "new event happend \n";

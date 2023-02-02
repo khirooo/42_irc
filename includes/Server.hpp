@@ -6,6 +6,7 @@
 #include <vector>
 #include <poll.h>
 #include <string>
+#include <cstdlib>
 
 using namespace std;
 class Client; //to remove
@@ -20,7 +21,7 @@ private:
 	char					_buffer[BUFFER_SIZE];	// to store clients data the size does not really mater here 
 	int						_svrSk;		// main server socket (for clients to connect)
 	vector<struct pollfd>	_pfds;		// vector with all client-server pollfd struct (socket id, event, revents) + the main server socket (pos = 0)
-	map<int, Client&>	_clients;		// maps of all clients and their assosiated server-client 
+	//map<int, Client&>	_clients;		// maps of all clients and their assosiated server-client 
 
 public:
 	Server(string pass, string port = "6667");
