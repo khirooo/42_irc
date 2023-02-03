@@ -11,7 +11,7 @@
 #include <cstdio>
 #include <fcntl.h>
 
-Server::Server(string pass, string port)
+Server::Server(std::string pass, std::string port)
 :
 _port(port),
 _password(pass)
@@ -159,10 +159,10 @@ void	Server::handel_message(struct pollfd* pfds_arr, int i)
 		//NOTE : remove it from pfd_arr ...
 	}
 	else
-		handel_command();
+		handel_command(pfds_arr[i].fd, std::string(_buffer));
 }
 
-void	Server::handel_command(void)
+void	Server::handel_command(int client_socket, std::string message)
 {
 	
 }

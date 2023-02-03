@@ -2,7 +2,7 @@ NAME	=	server
 
 CC		=	g++
 INCLUDES	=	./includes
-FLAGS	=	 -Wall -Werror -Wextra -std=c++98 -I $(INCLUDES)
+FLAGS	=	 -I $(INCLUDES)
 
 SRCDIR	=	src/
 SRCFILES = 	Server.cpp
