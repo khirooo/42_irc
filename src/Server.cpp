@@ -1,5 +1,6 @@
 #include "Server.hpp"
 
+
 #include <iostream>
 #include <cstring>
 #include <unistd.h>
@@ -10,6 +11,8 @@
 #include <cstring>
 #include <cstdio>
 #include <fcntl.h>
+#include <list>
+
 
 Server::Server(std::string pass, std::string port)
 :
@@ -138,32 +141,77 @@ void	Server::accept_connection(void)
 	pfd.fd = new_sock;
 	pfd.events = POLLIN;
 	_pfds.push_back(pfd);
+	_clients.insert(std::map<int, Client*>::value_type(new_sock, new Client(new_sock)));
 	//NOTE : u might need to update the array here ! if u want ur server to be fast
 }
 
 void	Server::handel_message(struct pollfd* pfds_arr, int i)
 {
 	int	exit_code;
+	Message	m;
 
-	memset(_buffer, 0, BUFFER_SIZE);
-	exit_code = recv(pfds_arr[i].fd, _buffer, BUFFER_SIZE, 0); //flags = MSG_DONTWAIT might be faster ...
-
-	if (exit_code <= 0) //connection closed or fail
+	while (!m.is_complete())
 	{
-		if (exit_code == 0)
-			std::cout << "Connection closed\n";
-		else if (exit_code == -1)
-			std::cerr << "Error: recv " << std::strerror(errno) << std::endl;
-		close(pfds_arr[i].fd); //chuss
-		_pfds.erase(_pfds.begin() + i);
-		//NOTE : remove it from pfd_arr ...
+		memset(_buffer, 0, BUFFER_SIZE);
+		exit_code = recv(pfds_arr[i].fd, _buffer, BUFFER_SIZE, 0); //flags = MSG_DONTWAIT might be faster ...
+		if (exit_code <= 0) //connection closed or fail
+		{
+			if (exit_code == 0)
+				std::cout << "Connection closed\n";
+			else if (exit_code == -1)
+				std::cerr << "Error: recv " << std::strerror(errno) << std::endl;
+			close(pfds_arr[i].fd); //chuss
+			_clients.erase(pfds_arr[i].fd);
+			_pfds.erase(_pfds.begin() + i);
+
+			break ;
+		}
+		m.append(_buffer);
 	}
-	else
-		handel_command(pfds_arr[i].fd, std::string(_buffer));
+	//std::cout << "m after the loop |" << m.get_msg() << "|" << std::endl;
+	handel_command(pfds_arr[i].fd, m);
 }
 
-void	Server::handel_command(int client_socket, std::string message)
+void	Server::handel_command(int client_socket, Message m)
+{
+	//std::cout << "m befor the check |" << m.get_msg() << "|" << std::endl;
+	if(!check_msg(m))
+	{
+		// rigel rabha ...
+		return ;
+	}
+
+	std::cout << "Nice ;)" << std::endl;
+
+}
+
+bool	Server::check_msg(Message m)
+{
+	std::string	cmd_list[8] = {"PASS", "NCK", "USER", "JOIN", "PART", "PRIVMSG", "QUIT", "KICK"};
+
+	//check if command exist
+	if (std::count(cmd_list, cmd_list + 8, m.get_cmd()) == 0)
+	{
+		std::cerr << "nik mok ila hadi command" << std::endl;
+		return false;
+	}
+
+	//this is just a test dont panic
+	std::vector<std::string>	params = m.get_params();
+	for(std::vector<std::string>::iterator it = params.begin(); it != params.end(); it++)
+	{
+		if (*it == "")
+		{
+			std::cerr << "nik mok ila hadi command" << std::endl;
+			return false;
+		}
+	}
+	return true;
+}
+
+// _________________________COMMANDS____________________________
+
+Reply	Server::cmd_pass(Client& client, Message& m)
 {
 	
 }
-

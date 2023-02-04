@@ -3,10 +3,10 @@
 #include <string>
 
 enum ClientState {
-	HANDSHAKE,
-	LOGIN,
-	REGISTERED,
-	DISCONNECTED
+	HANDSHAKE, 		// connected to the socket
+	LOGIN,    		// correct PASS given
+	REGISTERED,		// executed USER & NICK
+	DISCONNECTED	// wasted (donno why i need this acctually)
 };
 
 
@@ -19,8 +19,18 @@ private:
 	int			_skFd;
 	ClientState	_state;
 public:
-	Client();
+	Client(int fd);
 	~Client();
+	std::string	get_user(void) const;
+	std::string	get_nick(void) const;
+	std::string	get_real(void) const;
+	int			get_skFd(void) const;
+	ClientState	get_state(void) const;
+
+	void		set_user(std::string name);
+	void		set_nick(std::string nick);
+	void		set_real(std::string real);
+	void		set_state(ClientState state);
 };
 
 
