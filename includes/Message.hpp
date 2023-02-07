@@ -7,7 +7,7 @@
 
 class Message
 {
-private:
+protected:
 	std::string					_msg; //the whole thing
 	std::string					_prefix;//starts with ':' followed by sender eg. :doctor!doctor@baz.example.org ...
 	std::string					_cmd; //1 word or 3digits (reply)

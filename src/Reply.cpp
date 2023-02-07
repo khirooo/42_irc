@@ -16,10 +16,10 @@ Reply::~Reply()
 std::string	Reply::to_str(void) const
 {
 	std::string comment = "";
-
+	std::string	prf = _prefix;
 	if (!_prefix.empty())
-		_prefix = ":" + _prefix;
+		prf = ":" + _prefix;
 	if (!_params.empty())
 		comment = ":" + *_params.begin();
-	return _prefix + " " + _cmd + " " + comment;
+	return prf + " " + _cmd + " " + comment;
 }

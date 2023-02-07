@@ -10,13 +10,14 @@
 
 #include "Client.hpp"
 #include "Reply.hpp"
-
+#include "Utils.hpp"
 
 #define BUFFER_SIZE	1000
 
 class Server
 {
 private:
+	std::string					_host;
 	std::string					_port;
 	std::string					_password;
 	char					_buffer[BUFFER_SIZE];	// to store clients data the size does not really mater here 
@@ -36,7 +37,9 @@ public:
 	bool	check_msg(Message m);
 
 	// ALL SERVER COMMANDS (i may move this shit to a new class Command)
-	Reply	cmd_pass(Client& client, Message& m);
+	std::string	cmd_pass(Client* client, Message& m);
+	std::string	cmd_user(Client* client, Message& m);
+	std::string	cmd_nick(Client* client, Message& m);
 };
 
 #endif

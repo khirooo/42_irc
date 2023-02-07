@@ -45,7 +45,8 @@ void	Message::parse_msg(void)
 			_params.push_back(param.substr(1) + ' ' + tmp);
 			break;
 		}
-		_params.push_back(param);
+		if (!param.empty())
+			_params.push_back(param);
 	}
 }
 

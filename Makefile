@@ -5,7 +5,7 @@ INCLUDES	=	./includes
 FLAGS	=	 -I $(INCLUDES)
 
 SRCDIR	=	src/
-SRCFILES = 	Server.cpp  Message.cpp Client.cpp
+SRCFILES = 	Server.cpp  Client.cpp Message.cpp Reply.cpp
 SRCS	=	$(addprefix $(SRCDIR), $(SRCFILES))
 SRCS	+= main.cpp
 

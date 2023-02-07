@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <cerrno>
 #include <cstring>
@@ -30,7 +31,15 @@ void	Server::initilize(void)
 	int	exit_code;
 	int	yes = 1;
 	struct addrinfo hints, *servAddr, *p;
-
+	char	name[1000];
+	
+	if (gethostname(name, sizeof name) == -1)
+	{
+		std::cerr << "Error: gethostname " <<  std::strerror(errno) << std::endl;
+		exit (1);
+	}
+	_host= std::string(name);
+	std::cout << "HOST: " << _host<< std::endl;
 	//-- filling some hints for getaddrinfo so that it generates a addinfo struct for me
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC; //using both ip4 and ip6
@@ -129,19 +138,28 @@ void	Server::start(void)
 void	Server::accept_connection(void)
 {
 	int						new_sock;
+	char					name[1000];
 	struct sockaddr_storage	client_addr;
-	socklen_t				new_sock_len = sizeof(client_addr);
+	socklen_t				client_len = sizeof(client_addr);
 
-	new_sock = accept(_svrSk, (sockaddr*)&client_addr, &new_sock_len); //welcome b*t*h
+	new_sock = accept(_svrSk, (sockaddr*)&client_addr, &client_len); //welcome b*t*h
 	if (new_sock == -1)
 		std::cerr << "Error: accept " << std::strerror(errno) << std::endl;
 	else
 		std::cout << "new connection so Excitedd!" << std::endl;
+	if (new_sock != -1)
+	{
+		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD) == 0) {
+			std::cout << "Client host name: " << name << std::endl;
+		} else {
+			std::cerr << "Error resolving client host name" << std::endl;
+		}
+	}
 	struct pollfd pfd;
 	pfd.fd = new_sock;
 	pfd.events = POLLIN;
 	_pfds.push_back(pfd);
-	_clients.insert(std::map<int, Client*>::value_type(new_sock, new Client(new_sock)));
+	_clients.insert(std::map<int, Client*>::value_type(new_sock, new Client(new_sock, std::string(name))));
 	//NOTE : u might need to update the array here ! if u want ur server to be fast
 }
 
@@ -172,7 +190,7 @@ void	Server::handel_message(struct pollfd* pfds_arr, int i)
 	handel_command(pfds_arr[i].fd, m);
 }
 
-void	Server::handel_command(int client_socket, Message m)
+void	Server::handel_command(int socket, Message m)
 {
 	//std::cout << "m befor the check |" << m.get_msg() << "|" << std::endl;
 	if(!check_msg(m))
@@ -180,19 +198,34 @@ void	Server::handel_command(int client_socket, Message m)
 		// rigel rabha ...
 		return ;
 	}
-
+	
 	std::cout << "Nice ;)" << std::endl;
-
+	//just for testing
+	if (m.get_cmd() == "NICK")
+	{
+		std::string	reply = cmd_nick(_clients[socket], m);
+		if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) != reply.size())
+			std::cout << "hay 3la zebi" << std::endl;
+	}
+	if (m.get_cmd() == "USER")
+	{
+		std::string	reply = cmd_user(_clients[socket], m);
+		if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) != reply.size())
+			std::cout << "hay 3la zebi" << std::endl;
+	}
 }
 
 bool	Server::check_msg(Message m)
 {
-	std::string	cmd_list[8] = {"PASS", "NCK", "USER", "JOIN", "PART", "PRIVMSG", "QUIT", "KICK"};
+	std::string	cmd_list[8] = {"PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "QUIT", "KICK"};
 
+	std::cout << "<-" << m.get_msg() << std::endl;
+	if (m.get_cmd() == "CAP")
+		return true;
 	//check if command exist
 	if (std::count(cmd_list, cmd_list + 8, m.get_cmd()) == 0)
 	{
-		std::cerr << "nik mok ila hadi command" << std::endl;
+		std::cerr << "nik mok ila hadi '"<< m.get_cmd() << "' command" << std::endl;
 		return false;
 	}
 
@@ -211,7 +244,61 @@ bool	Server::check_msg(Message m)
 
 // _________________________COMMANDS____________________________
 
-Reply	Server::cmd_pass(Client& client, Message& m)
+std::string	Server::cmd_pass(Client* client, Message& m)
 {
-	
+	if (client->get_state() == LOGIN)
+		return ERR_ALREADYLOGEDIN(client->get_nick());
+	if (client->get_state() == REGISTERED)
+		return ERR_ALREADYREGISTRED(client->get_nick());
+	std::vector<std::string>	param = m.get_params();
+	if (param.size() == 0)
+		return ERR_NEEDMOREPARAMS(client->get_nick(), "PASS");
+	if (param[0] != _password)
+		return ERR_PASSWDMISMATCH(client->get_nick());
+	client->set_state(LOGIN);
+	return "";
+}
+
+std::string	Server::cmd_nick(Client* client, Message& m)
+{
+	if (client->get_state() == REGISTERED)
+		return ERR_ALREADYREGISTRED(client->get_nick());
+	std::vector<std::string>	param = m.get_params();
+	if (param.size() == 0)
+		return ERR_NONICKNAMEGIVEN(client->get_nick());
+
+	// check if valide else ERR_ERRONEUSNICKNAME
+	// ERR_RESTRICTED donno yet
+	/*	
+		ERR_UNAVAILRESOURCE : Returned by a server to a user trying to change nickname
+        when the desired nickname is blocked by the nick delay
+        mechanism. 
+	*/
+	if (param[0] == "") //create a database of nicknames and compare  
+		return ERR_NICKNAMEINUSE(client->get_nick());
+	client->set_nick(param[0]);
+	if (!client->get_user().empty())
+	{
+		client->set_state(REGISTERED);
+		return RPL_WELCOME(_host, client->get_nick(), client->get_user(), client->get_host());
+	}
+	return "";
+}
+
+std::string	Server::cmd_user(Client* client, Message& m)
+{
+
+	//handel shit errors
+
+	std::vector<std::string>	param = m.get_params();
+	client->set_user(param[0]);
+	if (param[1] != "*")
+		client->set_mode(param[1]);
+	client->set_real(*param.end());
+	if (!client->get_nick().empty())
+	{
+		client->set_state(REGISTERED);
+		return RPL_WELCOME(_host, client->get_nick(), client->get_user(), client->get_host());
+	}
+	return "";
 }
