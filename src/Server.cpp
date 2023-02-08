@@ -80,7 +80,7 @@ void	Server::initilize(void)
 			continue;
 		}
 		else
-			std::cout << "binded the server socket " << _svrSk << " with the port " << _port << std::endl;
+			std::cout << "binded the server socket " << _svrSk << " with the port " << _port << std::endl<< std::endl<< std::endl;
 		break; //success
 	}
 	freeaddrinfo(servAddr);
@@ -112,7 +112,7 @@ void	Server::start(void)
 		int	size = _pfds.size();
 		struct pollfd* pfds_arr = new struct pollfd[size];
 		std::copy(_pfds.begin(), _pfds.end(), pfds_arr);
-		std::cout << "_____POLL____"<< size << "____" << std::endl ;
+		//std::cout << "_____POLL____"<< size << "____" << std::endl ;
 		exit_code = poll(pfds_arr, size, -1);//block indefinitely
 		if (exit_code == -1)
 		{
@@ -146,14 +146,11 @@ void	Server::accept_connection(void)
 	if (new_sock == -1)
 		std::cerr << "Error: accept " << std::strerror(errno) << std::endl;
 	else
-		std::cout << "new connection so Excitedd!" << std::endl;
+		std::cout << "-- new connection \n" << std::endl;
 	if (new_sock != -1)
 	{
-		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD) == 0) {
-			std::cout << "Client host name: " << name << std::endl;
-		} else {
+		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD))
 			std::cerr << "Error resolving client host name" << std::endl;
-		}
 	}
 	struct pollfd pfd;
 	pfd.fd = new_sock;
@@ -175,7 +172,7 @@ void	Server::handel_message(struct pollfd* pfds_arr, int i)
 		if (exit_code <= 0) //connection closed or fail
 		{
 			if (exit_code == 0)
-				std::cout << "Connection closed\n";
+				std::cout << "\n-- connection closed\n\n";
 			else if (exit_code == -1)
 				std::cerr << "Error: recv " << std::strerror(errno) << std::endl;
 			close(pfds_arr[i].fd); //chuss
@@ -187,40 +184,39 @@ void	Server::handel_message(struct pollfd* pfds_arr, int i)
 		m.append(_buffer);
 	}
 	//std::cout << "m after the loop |" << m.get_msg() << "|" << std::endl;
-	handel_command(pfds_arr[i].fd, m);
+	//std::cout << "here" << std::endl;
+	if (!m.get_msg().empty())
+		handel_command(pfds_arr[i].fd, m);
 }
 
 void	Server::handel_command(int socket, Message m)
 {
-	//std::cout << "m befor the check |" << m.get_msg() << "|" << std::endl;
+	std::cout << "<--" << m.get_msg() << "." << std::endl;
 	if(!check_msg(m))
 	{
 		// rigel rabha ...
 		return ;
 	}
-	
-	std::cout << "Nice ;)" << std::endl;
-	//just for testing
+	std::string	reply;
+	if (m.get_cmd() == "PING")
+		reply = RPL_PONG(_host, _clients[socket]->get_host());
 	if (m.get_cmd() == "NICK")
-	{
-		std::string	reply = cmd_nick(_clients[socket], m);
-		if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) != reply.size())
-			std::cout << "hay 3la zebi" << std::endl;
-	}
+		reply = cmd_nick(_clients[socket], m);
 	if (m.get_cmd() == "USER")
-	{
-		std::string	reply = cmd_user(_clients[socket], m);
-		if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) != reply.size())
-			std::cout << "hay 3la zebi" << std::endl;
-	}
+		reply = cmd_user(_clients[socket], m);
+	if (m.get_cmd() == "PRIVMSG")
+		reply = cmd_prvmsg(_clients[socket], m);
+	if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) == reply.size())
+		std::cout << "-->" << reply << "." << std::endl;
+	else if (!reply.empty())
+		std::cout << "i need to send the rest" << std::endl;
 }
 
 bool	Server::check_msg(Message m)
 {
 	std::string	cmd_list[8] = {"PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "QUIT", "KICK"};
 
-	std::cout << "<-" << m.get_msg() << std::endl;
-	if (m.get_cmd() == "CAP")
+	if (m.get_cmd() == "CAP" || m.get_cmd() == "PING")
 		return true;
 	//check if command exist
 	if (std::count(cmd_list, cmd_list + 8, m.get_cmd()) == 0)
@@ -242,6 +238,30 @@ bool	Server::check_msg(Message m)
 	return true;
 }
 
+bool	Server::nick_used(int id, std::string nick)
+{
+	std::map<int, Client*>::iterator	it;
+	for(it = _clients.begin(); it != _clients.end(); ++it)
+	{
+		if (it->second->get_nick() == nick && it->first != id)
+			return true;
+	}
+	return false;
+}
+
+Client*	Server::get_client(std::string nick)
+{
+	std::map<int, Client*>::iterator it;
+	for (it = _clients.begin(); it != _clients.end(); it++)
+	{
+		std::cout << "cl_nick: " << it->second->get_nick() << "| " << nick << "." << std::endl;
+		if (it->second->get_nick() == nick)
+			return it->second;
+	}
+	return NULL;
+}
+
+
 // _________________________COMMANDS____________________________
 
 std::string	Server::cmd_pass(Client* client, Message& m)
@@ -261,8 +281,6 @@ std::string	Server::cmd_pass(Client* client, Message& m)
 
 std::string	Server::cmd_nick(Client* client, Message& m)
 {
-	if (client->get_state() == REGISTERED)
-		return ERR_ALREADYREGISTRED(client->get_nick());
 	std::vector<std::string>	param = m.get_params();
 	if (param.size() == 0)
 		return ERR_NONICKNAMEGIVEN(client->get_nick());
@@ -274,10 +292,14 @@ std::string	Server::cmd_nick(Client* client, Message& m)
         when the desired nickname is blocked by the nick delay
         mechanism. 
 	*/
-	if (param[0] == "") //create a database of nicknames and compare  
-		return ERR_NICKNAMEINUSE(client->get_nick());
+	if (nick_used(client->get_skFd(), param[0])) //create a database of nicknames and compare  
+	{
+		return ERR_NICKNAMEINUSE(_host, client->get_nick(), param[0]);
+	}
 	client->set_nick(param[0]);
-	if (!client->get_user().empty())
+	if (client->get_state() == REGISTERED)
+		RPL_WELCOME(_host, client->get_nick(), client->get_user(), client->get_host());
+	if (client->get_user() != "*")
 	{
 		client->set_state(REGISTERED);
 		return RPL_WELCOME(_host, client->get_nick(), client->get_user(), client->get_host());
@@ -295,10 +317,32 @@ std::string	Server::cmd_user(Client* client, Message& m)
 	if (param[1] != "*")
 		client->set_mode(param[1]);
 	client->set_real(*param.end());
-	if (!client->get_nick().empty())
+	if (client->get_nick() != "*")
 	{
 		client->set_state(REGISTERED);
 		return RPL_WELCOME(_host, client->get_nick(), client->get_user(), client->get_host());
 	}
+	return "";
+}
+
+std::string	Server::cmd_prvmsg(Client* client, Message& m)
+{
+	//error handel
+
+	Client* 	recp = get_client(m.get_params()[0]);
+	if (recp == NULL)
+	{
+		std::cout << "client not found" << std::endl;
+		return ""; //handel error
+	}
+
+	std::string	msg = m.get_params()[1];
+	std::cout << "msg: " << msg << "." << std::endl;
+	std::string	reply;
+	reply = RPL_PRIVMSG(client->get_nick(), client->get_user(), client->get_host(), recp->get_nick(), msg);
+	if (send(recp->get_skFd(), reply.c_str(), reply.size(), 0) == reply.size())
+		std::cout << "-->" << reply << "." << std::endl;
+	else
+		std::cout << "!!!i need to send the rest" << std::endl;
 	return "";
 }

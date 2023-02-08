@@ -28,8 +28,7 @@ void	Message::append(char* buffer)
 
 void	Message::parse_msg(void)
 {
-	std::istringstream in_stream(_msg);
-
+	std::istringstream in_stream(_msg.substr(0, _msg.size() - 2));
 	//get the prefix 
 	if (_msg[0] == ':')
 		std::getline(in_stream, _prefix, ' ');
@@ -74,6 +73,12 @@ std::vector<std::string>	Message::get_params(void) const
 {
 	return _params;
 }
+
+Vector::Message	Message::split_msg(void) const
+{
+	std::istringstream in_stream(_msg.substr(0, _msg.size()));
+}
+
 std::ostream&	operator<<(std::ostream& s, Message& m)
 {
 	s << "--Message--" << std::endl << "  Prefix: " << m.get_prefix() << std::endl

@@ -3,9 +3,9 @@
 Client::Client(int fd, std::string name)
 :
 _host(name),
-_usr(""),
-_nick(""),
-_real(""),
+_usr("*"),
+_nick("*"),
+_real("*"),
 _skFd(fd),
 _state(HANDSHAKE)
 {

@@ -35,11 +35,13 @@ public:
 	void	handel_message(struct pollfd* pfds_arr, int i);
 	void	handel_command(int client_socket, Message m);
 	bool	check_msg(Message m);
-
+	bool	nick_used(int id, std::string nick);
+	Client*	get_client(std::string nick);
 	// ALL SERVER COMMANDS (i may move this shit to a new class Command)
 	std::string	cmd_pass(Client* client, Message& m);
 	std::string	cmd_user(Client* client, Message& m);
 	std::string	cmd_nick(Client* client, Message& m);
+	std::string cmd_prvmsg(Client* client, Message& m);
 };
 
 #endif

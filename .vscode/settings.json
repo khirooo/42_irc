@@ -62,6 +62,7 @@
 		"sstream": "cpp",
 		"streambuf": "cpp",
 		"system_error": "cpp",
-		"unordered_map": "cpp"
+		"unordered_map": "cpp",
+		"__functional_03": "cpp"
 	}
 }
