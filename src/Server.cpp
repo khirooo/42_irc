@@ -20,6 +20,8 @@ Server::Server(std::string pass, std::string port)
 _port(port),
 _password(pass)
 {
+	//add admin_user 
+	_clients.insert(std::map<int, Client*>::value_type(-1, new Client(-1, std::string("admin"))));
 }
 
 Server::~Server()
@@ -277,6 +279,16 @@ Client*	Server::get_client(std::string nick)
 	return NULL;
 }
 
+channel_it	Server::get_channel(std::string name)
+{
+	channel_it	it;
+	for(it = _channels.begin(); it != _channels.end(); ++it)
+	{
+		if ((*it)->get_name() == name)
+			return it;
+	}
+	return it;
+}
 
 // _________________________COMMANDS____________________________
 
