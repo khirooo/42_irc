@@ -17,7 +17,7 @@ public:
 	Message();
 	~Message();
 
-	void						append(char* buffer);
+	void						append(const char* buffer);
 	void						parse_msg(void);
 
 	std::string					get_msg(void) const;

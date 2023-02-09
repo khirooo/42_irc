@@ -16,7 +16,7 @@ Message::~Message()
 {
 }
 
-void	Message::append(char* buffer)
+void	Message::append(const char* buffer)
 {
 	_msg+=std::string(buffer);
 	if (_msg.size() < 2)
@@ -74,9 +74,11 @@ std::vector<std::string>	Message::get_params(void) const
 	return _params;
 }
 
-Vector::Message	Message::split_msg(void) const
+std::vector<Message>	Message::split_msg(void) const
 {
 	std::istringstream in_stream(_msg.substr(0, _msg.size()));
+	std::vector<Message>	v;
+	return v;
 }
 
 std::ostream&	operator<<(std::ostream& s, Message& m)

@@ -13,7 +13,7 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <list>
-
+#include <algorithm>
 
 Server::Server(std::string pass, std::string port)
 :
@@ -160,12 +160,15 @@ void	Server::accept_connection(void)
 	//NOTE : u might need to update the array here ! if u want ur server to be fast
 }
 
+
 void	Server::handel_message(struct pollfd* pfds_arr, int i)
 {
 	int	exit_code;
-	Message	m;
+	std::vector<Message>	m_vec;
+	Message					*m = NULL;
+	std::vector<std::string>	vec;
 
-	while (!m.is_complete())
+	do
 	{
 		memset(_buffer, 0, BUFFER_SIZE);
 		exit_code = recv(pfds_arr[i].fd, _buffer, BUFFER_SIZE, 0); //flags = MSG_DONTWAIT might be faster ...
@@ -178,33 +181,47 @@ void	Server::handel_message(struct pollfd* pfds_arr, int i)
 			close(pfds_arr[i].fd); //chuss
 			_clients.erase(pfds_arr[i].fd);
 			_pfds.erase(_pfds.begin() + i);
-
 			break ;
 		}
-		m.append(_buffer);
-	}
+		vec = ft_split(_buffer);
+		for(int j = 0; j < vec.size(); j++)
+		{
+			m = new Message();
+			m->append(vec[j].c_str());
+			m_vec.push_back(*m);
+			if (m->is_complete())
+			{
+				delete m;
+				m = NULL;
+			}
+		}
+	}while (m);
 	//std::cout << "m after the loop |" << m.get_msg() << "|" << std::endl;
-	//std::cout << "here" << std::endl;
-	if (!m.get_msg().empty())
-		handel_command(pfds_arr[i].fd, m);
+	for (int j = 0; j < m_vec.size(); j++)
+		handel_command(pfds_arr[i].fd, m_vec[j]);
 }
 
 void	Server::handel_command(int socket, Message m)
 {
 	std::cout << "<--" << m.get_msg() << "." << std::endl;
+	std::string	cmd = m.get_cmd();
+	std::vector<std::string> params = m.get_params();
 	if(!check_msg(m))
 	{
+		std::cout << "did not pass the check" << std::endl;
 		// rigel rabha ...
 		return ;
 	}
 	std::string	reply;
-	if (m.get_cmd() == "PING")
-		reply = RPL_PONG(_host, _clients[socket]->get_host());
-	if (m.get_cmd() == "NICK")
+	if (cmd == "CAP" && params[0] != "END")
+		reply = RPL_CAP(_host);
+	if (cmd == "PING")
+		reply = RPL_PING(_host, params[0]);
+	if (cmd == "NICK")
 		reply = cmd_nick(_clients[socket], m);
-	if (m.get_cmd() == "USER")
+	if (cmd == "USER")
 		reply = cmd_user(_clients[socket], m);
-	if (m.get_cmd() == "PRIVMSG")
+	if (cmd == "PRIVMSG")
 		reply = cmd_prvmsg(_clients[socket], m);
 	if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) == reply.size())
 		std::cout << "-->" << reply << "." << std::endl;
@@ -254,7 +271,6 @@ Client*	Server::get_client(std::string nick)
 	std::map<int, Client*>::iterator it;
 	for (it = _clients.begin(); it != _clients.end(); it++)
 	{
-		std::cout << "cl_nick: " << it->second->get_nick() << "| " << nick << "." << std::endl;
 		if (it->second->get_nick() == nick)
 			return it->second;
 	}
@@ -292,13 +308,16 @@ std::string	Server::cmd_nick(Client* client, Message& m)
         when the desired nickname is blocked by the nick delay
         mechanism. 
 	*/
+	if (client->get_nick() == param[0])
+		return "";
 	if (nick_used(client->get_skFd(), param[0])) //create a database of nicknames and compare  
 	{
 		return ERR_NICKNAMEINUSE(_host, client->get_nick(), param[0]);
 	}
+	std::string old = client->get_nick();
 	client->set_nick(param[0]);
 	if (client->get_state() == REGISTERED)
-		RPL_WELCOME(_host, client->get_nick(), client->get_user(), client->get_host());
+		return RPL_NICKCHANGE(old, client->get_user(), client->get_host(), param[0]);
 	if (client->get_user() != "*")
 	{
 		client->set_state(REGISTERED);
@@ -316,7 +335,7 @@ std::string	Server::cmd_user(Client* client, Message& m)
 	client->set_user(param[0]);
 	if (param[1] != "*")
 		client->set_mode(param[1]);
-	client->set_real(*param.end());
+	client->set_real(*(param.end() - 1));
 	if (client->get_nick() != "*")
 	{
 		client->set_state(REGISTERED);
