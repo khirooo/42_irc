@@ -32,21 +32,25 @@ public:
 	Server(std::string pass, std::string port = "6667");
 	~Server();
 
-	void		initilize(void);
-	void		start(void);
-	void		accept_connection(void);
-	void		handel_message(struct pollfd* pfds_arr, int i);
-	void		handel_command(int client_socket, Message m);
-	bool		check_msg(Message m);
-	bool		nick_used(int id, std::string nick);
-	Client*		get_client(std::string nick);
-	channel_it	get_channel(std::string name);
-	
+	void					initilize(void);
+	void					start(void);
+	void					accept_connection(void);
+	void					handel_message(struct pollfd* pfds_arr, int i);
+	void					handel_command(int client_socket, Message m);
+	bool					check_msg(Message m);
+	bool					nick_used(int id, std::string nick);
+	Client*					get_client(std::string name);
+	Channel*				get_channel(std::string name);
+	void					close_connection(struct pollfd* pfds_arr, int i);
+	void					send_to_client(Client* client, std::string reply) const;
+	void					send_to_channel(Client* client, Channel* channel, std::string reply) const;
 	// ALL SERVER COMMANDS (i may move this shit to a new class Command)
 	std::string	cmd_pass(Client* client, Message& m);
 	std::string	cmd_user(Client* client, Message& m);
 	std::string	cmd_nick(Client* client, Message& m);
 	std::string cmd_prvmsg(Client* client, Message& m);
+	std::string	cmd_join(Client* client, Message& m);
+	std::string	cmd_part(Client* client, Message& m);
 };
 
 #endif

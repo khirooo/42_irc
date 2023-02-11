@@ -47,6 +47,11 @@ ClientState	Client::get_state(void) const
 	return _state;
 }
 
+std::vector<Channel*>	Client::get_channels(void) const
+{
+	return _channels;
+}
+
 void		Client::set_user(std::string name)
 {
 	_usr = name;
@@ -70,4 +75,31 @@ void		Client::set_mode(std::string mode)
 void		Client::set_state(ClientState state)
 {
 	_state = state;
+}
+
+void		Client::add_channel(Channel* channel)
+{
+	_channels.push_back(channel);
+}
+
+void		Client::part_channel(Channel* channel)
+{
+	int	i;
+	for(i = 0; i < _channels.size(); i++)
+	{
+		if (_channels[i]->get_name() == channel->get_name())
+			break;
+	}
+	_channels.erase(_channels.begin() + i);
+}
+
+bool	Client::in_channel(std::string channel)
+{
+	int	i;
+	for(i = 0; i < _channels.size(); i++)
+	{
+		if (_channels[i]->get_name() == channel)
+			return true;
+	}
+	return false;
 }

@@ -18,12 +18,18 @@ public:
 	~Channel();
 
 	std::string				get_name(void) const;
-	std::vector<Client*>	get_clinets(void) const; //weird...(EDIT: not really)
+	std::vector<Client*>	get_clients(void) const; //weird...(EDIT: not really)
 	void					add_client(Client* client);
 	void					add_oper(Client* clinet);
-	//get n clinet
+	unsigned int			get_n_clients(void) const;
+	std::string				get_clients_nick(void) const;
 	//get nicks
 	//get topic ...ect
+	void					remove_client(Client* client);
+
+
+	/*------debug stuff-----*/
+	void	print_clients();
 };
 
 

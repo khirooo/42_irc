@@ -22,6 +22,7 @@ _password(pass)
 {
 	//add admin_user 
 	_clients.insert(std::map<int, Client*>::value_type(-1, new Client(-1, std::string("admin"))));
+	_channels.push_back(new Channel("#general"));
 }
 
 Server::~Server()
@@ -115,6 +116,7 @@ void	Server::start(void)
 		struct pollfd* pfds_arr = new struct pollfd[size];
 		std::copy(_pfds.begin(), _pfds.end(), pfds_arr);
 		//std::cout << "_____POLL____"<< size << "____" << std::endl ;
+
 		exit_code = poll(pfds_arr, size, -1);//block indefinitely
 		if (exit_code == -1)
 		{
@@ -180,9 +182,7 @@ void	Server::handel_message(struct pollfd* pfds_arr, int i)
 				std::cout << "\n-- connection closed\n\n";
 			else if (exit_code == -1)
 				std::cerr << "Error: recv " << std::strerror(errno) << std::endl;
-			close(pfds_arr[i].fd); //chuss
-			_clients.erase(pfds_arr[i].fd);
-			_pfds.erase(_pfds.begin() + i);
+			close_connection(pfds_arr, i);
 			break ;
 		}
 		vec = ft_split(_buffer);
@@ -203,6 +203,32 @@ void	Server::handel_message(struct pollfd* pfds_arr, int i)
 		handel_command(pfds_arr[i].fd, m_vec[j]);
 }
 
+void	Server::close_connection(struct pollfd* pfds_arr, int i)
+{
+	Client*	client = _clients[pfds_arr[i].fd];
+	std::vector<Channel*>	channels = client->get_channels();
+	for (int i = 0; i < channels.size(); i++)
+	{
+		std::cout << "chan: " << channels[i]->get_name() << std::endl;
+		std::string	reply = RPL_QUIT(client->get_nick(), client->get_user(), 	client->get_host());
+		std::vector<Client*>	ch_cls = channels[i]->get_clients();
+		channels[i]->print_clients();
+		for (int j = 0; j < ch_cls.size(); j++)
+		{
+			if (ch_cls[j]->get_nick() == client->get_nick())
+				continue;
+			if (!reply.empty() && send(ch_cls[j]->get_skFd(), reply.c_str(), reply.size(), 0) == reply.size())
+				std::cout << "-->" << reply << "." << std::endl;
+			else if (!reply.empty())
+				std::cout << "i need to send the rest" << std::endl;
+		}
+		channels[i]->remove_client(client);
+	}
+	close(pfds_arr[i].fd);
+	_clients.erase(pfds_arr[i].fd);
+	_pfds.erase(_pfds.begin() + i);
+}
+
 void	Server::handel_command(int socket, Message m)
 {
 	std::cout << "<--" << m.get_msg() << "." << std::endl;
@@ -215,16 +241,24 @@ void	Server::handel_command(int socket, Message m)
 		return ;
 	}
 	std::string	reply;
-	if (cmd == "CAP" && params[0] != "END")
+	if (_clients[socket]->get_state() == HANDSHAKE && cmd != "PASS")
+		reply = ERR_NOTREGISTERED(_host);
+	else if (cmd == "CAP" && params[0] != "END")
 		reply = RPL_CAP(_host);
-	if (cmd == "PING")
+	else if (cmd == "PASS")
+		reply = cmd_pass(_clients[socket], m);
+	else if (cmd == "PING")
 		reply = RPL_PING(_host, params[0]);
-	if (cmd == "NICK")
+	else if (cmd == "NICK")
 		reply = cmd_nick(_clients[socket], m);
-	if (cmd == "USER")
+	else if (cmd == "USER")
 		reply = cmd_user(_clients[socket], m);
-	if (cmd == "PRIVMSG")
+	else if (cmd == "PRIVMSG")
 		reply = cmd_prvmsg(_clients[socket], m);
+	else if (cmd == "JOIN")
+		reply = cmd_join(_clients[socket], m);
+	else if (cmd == "PART")
+		reply = cmd_part(_clients[socket], m);
 	if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) == reply.size())
 		std::cout << "-->" << reply << "." << std::endl;
 	else if (!reply.empty())
@@ -268,26 +302,45 @@ bool	Server::nick_used(int id, std::string nick)
 	return false;
 }
 
-Client*	Server::get_client(std::string nick)
+Client*	Server::get_client(std::string name)
 {
 	std::map<int, Client*>::iterator it;
-	for (it = _clients.begin(); it != _clients.end(); it++)
+	for (it = _clients.begin(); it != _clients.end(); ++it)
 	{
-		if (it->second->get_nick() == nick)
+		if (it->second->get_nick() == name)
 			return it->second;
 	}
 	return NULL;
 }
 
-channel_it	Server::get_channel(std::string name)
+Channel*	Server::get_channel(std::string name)
 {
 	channel_it	it;
 	for(it = _channels.begin(); it != _channels.end(); ++it)
 	{
 		if ((*it)->get_name() == name)
-			return it;
+			return *it;
 	}
-	return it;
+	return NULL;
+}
+
+void		Server::send_to_client(Client* client, std::string reply) const
+{
+	if (send(client->get_skFd(), reply.c_str(), reply.size(), 0) == reply.size())
+		std::cout << "-->" << reply << "." << std::endl;
+	else
+		std::cout << "!!!i need to send the rest" << std::endl;
+}
+
+void		Server::send_to_channel(Client* client, Channel* channel, std::string reply) const
+{
+	std::vector<Client*>	clients = channel->get_clients();
+	for(int	i= 0; i < clients.size(); i++)
+	{
+		if (clients[i]->get_nick() == client->get_nick())
+			continue;
+		send_to_client(clients[i], reply);
+	}
 }
 
 // _________________________COMMANDS____________________________
@@ -302,34 +355,43 @@ std::string	Server::cmd_pass(Client* client, Message& m)
 	if (param.size() == 0)
 		return ERR_NEEDMOREPARAMS(client->get_nick(), "PASS");
 	if (param[0] != _password)
-		return ERR_PASSWDMISMATCH(client->get_nick());
+		return ERR_PASSWDMISMATCH(_host);
 	client->set_state(LOGIN);
 	return "";
 }
 
 std::string	Server::cmd_nick(Client* client, Message& m)
 {
-	std::vector<std::string>	param = m.get_params();
-	if (param.size() == 0)
-		return ERR_NONICKNAMEGIVEN(client->get_nick());
 
-	// check if valide else ERR_ERRONEUSNICKNAME
 	// ERR_RESTRICTED donno yet
 	/*	
 		ERR_UNAVAILRESOURCE : Returned by a server to a user trying to change nickname
         when the desired nickname is blocked by the nick delay
         mechanism. 
 	*/
+	if (client->get_state() == HANDSHAKE)
+	{
+		return ERR_NOTREGISTERED(_host); //should be not logged in
+	}
+	std::vector<std::string>	param = m.get_params();
+	if (param.size() == 0)
+		return ERR_NONICKNAMEGIVEN(client->get_nick());
 	if (client->get_nick() == param[0])
 		return "";
-	if (nick_used(client->get_skFd(), param[0])) //create a database of nicknames and compare  
+	if (nick_used(client->get_skFd(), param[0]))
 	{
 		return ERR_NICKNAMEINUSE(_host, client->get_nick(), param[0]);
 	}
 	std::string old = client->get_nick();
 	client->set_nick(param[0]);
 	if (client->get_state() == REGISTERED)
-		return RPL_NICKCHANGE(old, client->get_user(), client->get_host(), param[0]);
+	{
+		std::string reply = RPL_NICKCHANGE(old, client->get_user(), client->get_host(), param[0]);
+		std::vector<Channel*>	channels = client->get_channels();
+		send_to_client(client, reply);
+		for (int i = 0; i < channels.size(); i++)
+			send_to_channel(client, channels[i], reply);
+	}
 	if (client->get_user() != "*")
 	{
 		client->set_state(REGISTERED);
@@ -358,22 +420,76 @@ std::string	Server::cmd_user(Client* client, Message& m)
 
 std::string	Server::cmd_prvmsg(Client* client, Message& m)
 {
-	//error handel
-
-	Client* 	recp = get_client(m.get_params()[0]);
-	if (recp == NULL)
-	{
-		std::cout << "client not found" << std::endl;
-		return ""; //handel error
-	}
-
-	std::string	msg = m.get_params()[1];
-	std::cout << "msg: " << msg << "." << std::endl;
+	std::string	dist = m.get_params()[0];
+	std::string msg = m.get_params()[1];
 	std::string	reply;
-	reply = RPL_PRIVMSG(client->get_nick(), client->get_user(), client->get_host(), recp->get_nick(), msg);
-	if (send(recp->get_skFd(), reply.c_str(), reply.size(), 0) == reply.size())
-		std::cout << "-->" << reply << "." << std::endl;
+	if (dist[0] == '#')
+	{
+		Channel*	channel = get_channel(dist);
+		if (channel == NULL)
+		{
+			reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
+			send_to_client(client, reply);
+		}
+		else if (!client->in_channel(dist))
+		{
+			reply = ERR_CANNOTSENDTOCHAN(_host, client->get_nick(), dist);
+			send_to_client(client, reply);
+		}
+		else
+		{
+			reply = RPL_PRIVMSG(client->get_nick(), client->get_user(), client->get_host(), dist, msg);
+			send_to_channel(client, channel, reply);
+		}
+	}
 	else
-		std::cout << "!!!i need to send the rest" << std::endl;
+	{
+		Client*	cl = get_client(dist);
+		if (cl == NULL)
+		{
+			std::string	reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
+			send_to_client(client, reply);
+		}
+		else
+		{
+			reply = RPL_PRIVMSG(client->get_nick(), client->get_user(), client->get_host(), cl->get_nick(), msg);
+			send_to_client(cl, reply);
+		}
+	}
+	return "";
+}
+
+std::string	Server::cmd_join(Client* client, Message& m)
+{
+	std::string channel_name = m.get_params()[0];
+	if (channel_name[0] != '#')
+		return ERR_NOSUCHCHANNEL(_host, client->get_nick(), channel_name);
+	if (client->in_channel(channel_name))
+		return "";
+	Channel*	channel = get_channel(channel_name);
+	if (channel == NULL)
+	{
+		channel = new Channel(channel_name);
+		_channels.push_back(channel);
+		channel->add_oper(client);
+	}
+	channel->add_client(client);
+	client->add_channel(channel);
+	std::string	reply = RPL_JOIN(client->get_nick(), client->get_user(), client->get_host(), channel_name);
+	send_to_client(client, reply);
+	send_to_channel(client, channel, reply);
+	std::string clients_ls = RPL_LS_CL(_host, client->get_nick(), channel_name) + channel->get_clients_nick();
+	return clients_ls;
+}
+
+std::string	Server::cmd_part(Client* client, Message& m)
+{
+	std::string				ch_name = m.get_params()[0];
+	Channel*				ch = get_channel(ch_name);
+	std::string				reply = RPL_PART(client->get_nick(), client->get_user(), client->get_host(), ch_name);
+	send_to_client(client, reply);
+	send_to_channel(client, ch, reply);
+	client->part_channel(ch);
+	ch->remove_client(client);
 	return "";
 }
