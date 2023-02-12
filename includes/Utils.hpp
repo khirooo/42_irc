@@ -12,9 +12,9 @@
 //ERROR REPLIES
 #define ERR_ALREADYLOGEDIN(source)						":" + source + " 460 " ":Already logged in\r\n"
 #define ERR_ALREADYREGISTRED(source)					":" + source + " 462 " ":Already registered in\r\n"
-#define ERR_NEEDMOREPARAMS(source, command)				":" + source + " 461 " + command + " :Not enough parameters\r\n"
+#define ERR_NEEDMOREPARAMS(source, command)				":" + source + " 461 " + command + " :Not enough parameters\r\n"  //!!
 #define ERR_PASSWDMISMATCH(source)						":" + source + " 464 " + "PASS" + " :Password incorrect\r\n"
-#define ERR_NONICKNAMEGIVEN(source)						":" + source + " 431 " + "NICK" + " :Nickname not given\r\n"
+#define ERR_NONICKNAMEGIVEN(source)						":" + source + " 431 " + "NICK" + " :Nickname not given\r\n"	//!!
 
 #define ERR_NICKNAMEINUSE(src, nick, used)				":" + src + " 433 " + nick + " " + used + " :Nickname is already in use\r\n"
 #define ERR_NOSUCHCHANNEL(src, nick, channel)			":" + src + " 403 " +  nick + " " + channel + " :No such channel\r\n"
@@ -38,16 +38,16 @@
 #define RPL_WELCOME(src, nick, user, host)					":" + src + " 001 " + nick + " :Welcome to the ft_irc network " + nick + "!" + user + "@" + host + "\r\n"
 #define	RPL_NICKCHANGE(nick, user, user_host, nw_nick)		":" + nick + "!" + user + "@" + user_host + " " + "NICK" + " :" + nw_nick + "\r\n"
 #define RPL_JOIN(nick, user, user_host, channel)			":" + nick + "!" + user + "@" + user_host + " JOIN " + channel + " * :" + user + "\r\n"
-#define	RPL_LS_CL(src, nick, channel)						":" + src + " 353 " + nick + " = " + channel + " :"
-
-#define RPL_NAMREPLY(source, channel, users)	"353 " + source + " = " + channel + " :" + users
-#define RPL_ENDOFNAMES(source, channel)			"366 " + source + " " + channel + " :End of /NAMES list."
+#define	RPL_TOPIC(src, nick, channel, topic)				":" + src + " 332 " + nick + " " + channel + " :" + topic + "\r\n"
+#define	RPL_NAMREPLY(src, nick, channel)					":" + src + " 353 " + nick + " = " + channel + " :"
+#define RPL_ENDOFNAMES(src, nick, channel)					":" + src + " 366 " + nick + " " + channel + " :END of NAMES list\r\n"
 
 // COMMAND REPLIES
-#define RPL_PART(src_nick, src_usr, src_host, channel)						":" + src_nick + "!" + src_usr + "@" + src_host + " PART " + channel + " :gonee... :'( \r\n"
+#define RPL_PART(src_nick, src_usr, src_host, channel)				":" + src_nick + "!" + src_usr + "@" + src_host + " PART " + channel + " :gonee... :'( \r\n"
 #define RPL_PRIVMSG(src_nick, src_usr, src_host, dis_nick, msg)		":" + src_nick + "!" + src_usr + "@" + src_host + " PRIVMSG " + dis_nick + " :" + msg + "\r\n"
-#define RPL_NOTICE(source, target, message)							":" + source + " NOTICE " + target + " :" + message
+#define RPL_NOTICE(src_nick, src_usr, src_host, dis_nick, msg)		":" + src_nick + "!" + src_usr + "@" + src_host + " NOTICE " + dis_nick + " :" + msg + "\r\n"
 #define RPL_QUIT(src_nick, src_usr, src_host)						":" + src_nick + "!" + src_usr + "@" + src_host + " QUIT :Client Quit \r\n"
+
 #define RPL_KICK(source, channel, target, reason)					":" + source + " KICK " + channel + " " + target + " :" + reason
 #define RPL_MODE(source, channel, modes, args)						":" + source + " MODE " + channel + " " + modes + " " + args
 

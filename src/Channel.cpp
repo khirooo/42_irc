@@ -20,21 +20,15 @@ std::vector<Client*>	Channel::get_clients(void) const
 	return _clients;
 }
 
-void	Channel::add_client(Client* client)
+std::string				Channel::get_topic(void) const
 {
-	_clients.push_back(client);
-}
-
-void	Channel::add_oper(Client* client)
-{
-	_opers.push_back(client);
+	return _topic;
 }
 
 unsigned int	Channel::get_n_clients(void) const
 {
 	return _clients.size();
 }
-
 
 std::string		Channel::get_clients_nick(void) const
 {
@@ -45,7 +39,20 @@ std::string		Channel::get_clients_nick(void) const
 	return clients_ls;
 }
 
+void	Channel::set_topic(std::string topic)
+{
+	_topic = topic;
+}
 
+void	Channel::add_client(Client* client)
+{
+	_clients.push_back(client);
+}
+
+void	Channel::add_oper(Client* client)
+{
+	_opers.push_back(client);
+}
 
 void	Channel::remove_client(Client* client)
 {

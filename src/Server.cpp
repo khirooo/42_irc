@@ -22,7 +22,9 @@ _password(pass)
 {
 	//add admin_user 
 	_clients.insert(std::map<int, Client*>::value_type(-1, new Client(-1, std::string("admin"))));
-	_channels.push_back(new Channel("#general"));
+	Channel*	channel = new Channel("#general");
+	channel->set_topic("Spain without s...");
+	_channels.push_back(channel);
 }
 
 Server::~Server()
@@ -255,6 +257,8 @@ void	Server::handel_command(int socket, Message m)
 		reply = cmd_user(_clients[socket], m);
 	else if (cmd == "PRIVMSG")
 		reply = cmd_prvmsg(_clients[socket], m);
+	else if (cmd == "NOTICE")
+		reply = cmd_notice(_clients[socket], m);
 	else if (cmd == "JOIN")
 		reply = cmd_join(_clients[socket], m);
 	else if (cmd == "PART")
@@ -267,12 +271,12 @@ void	Server::handel_command(int socket, Message m)
 
 bool	Server::check_msg(Message m)
 {
-	std::string	cmd_list[8] = {"PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "QUIT", "KICK"};
+	std::string	cmd_list[9] = {"PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "NOTICE", "QUIT", "KICK"};
 
 	if (m.get_cmd() == "CAP" || m.get_cmd() == "PING")
 		return true;
 	//check if command exist
-	if (std::count(cmd_list, cmd_list + 8, m.get_cmd()) == 0)
+	if (std::count(cmd_list, cmd_list + 9, m.get_cmd()) == 0)
 	{
 		std::cerr << "nik mok ila hadi '"<< m.get_cmd() << "' command" << std::endl;
 		return false;
@@ -459,6 +463,32 @@ std::string	Server::cmd_prvmsg(Client* client, Message& m)
 	return "";
 }
 
+std::string	Server::cmd_notice(Client* client, Message& m)
+{
+	std::string	dist = m.get_params()[0];
+	std::string msg = m.get_params()[1];
+	std::string	reply;
+	if (dist[0] == '#')
+	{
+		Channel*	channel = get_channel(dist);
+		if (channel && client->in_channel(dist))
+		{
+			reply = RPL_NOTICE(client->get_nick(), client->get_user(), client->get_host(), dist, msg);
+			send_to_channel(client, channel, reply);
+		}
+	}
+	else
+	{
+		Client*	cl = get_client(dist);
+		if (cl)
+		{
+			reply = RPL_NOTICE(client->get_nick(), client->get_user(), client->get_host(), cl->get_nick(), msg);
+			send_to_client(cl, reply);
+		}
+	}
+	return "";
+}
+
 std::string	Server::cmd_join(Client* client, Message& m)
 {
 	std::string channel_name = m.get_params()[0];
@@ -478,8 +508,13 @@ std::string	Server::cmd_join(Client* client, Message& m)
 	std::string	reply = RPL_JOIN(client->get_nick(), client->get_user(), client->get_host(), channel_name);
 	send_to_client(client, reply);
 	send_to_channel(client, channel, reply);
-	std::string clients_ls = RPL_LS_CL(_host, client->get_nick(), channel_name) + channel->get_clients_nick();
-	return clients_ls;
+	reply = RPL_TOPIC(_host, client->get_nick(), channel_name, channel->get_topic());
+	send_to_client(client, reply);
+	reply = RPL_NAMREPLY(_host, client->get_nick(), channel_name) + channel->get_clients_nick();
+	send_to_client(client, reply);
+	reply = RPL_ENDOFNAMES(_host, client->get_nick(), channel_name);
+	send_to_client(client, reply);
+	return "";
 }
 
 std::string	Server::cmd_part(Client* client, Message& m)

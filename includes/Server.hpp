@@ -49,6 +49,7 @@ public:
 	std::string	cmd_user(Client* client, Message& m);
 	std::string	cmd_nick(Client* client, Message& m);
 	std::string cmd_prvmsg(Client* client, Message& m);
+	std::string cmd_notice(Client* client, Message& m);
 	std::string	cmd_join(Client* client, Message& m);
 	std::string	cmd_part(Client* client, Message& m);
 };
