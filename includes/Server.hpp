@@ -44,6 +44,8 @@ public:
 	void					close_connection(struct pollfd* pfds_arr, int i);
 	void					send_to_client(Client* client, std::string reply) const;
 	void					send_to_channel(Client* client, Channel* channel, std::string reply) const;
+	std::string				check_mode_usr(std::string mode) const;
+	std::string				check_mode_chan(std::string mode) const;
 	// ALL SERVER COMMANDS (i may move this shit to a new class Command)
 	std::string	cmd_pass(Client* client, Message& m);
 	std::string	cmd_user(Client* client, Message& m);
@@ -52,6 +54,9 @@ public:
 	std::string cmd_notice(Client* client, Message& m);
 	std::string	cmd_join(Client* client, Message& m);
 	std::string	cmd_part(Client* client, Message& m);
+	std::string	cmd_names(Client* client, Message& m);
+	std::string	cmd_mode(Client* client, Message& m);
+	std::string	cmd_topic(Client *client, Message& m);
 };
 
 #endif

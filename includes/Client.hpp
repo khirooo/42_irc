@@ -22,7 +22,7 @@ private:
 	std::string				_usr;
 	std::string				_nick;
 	std::string				_real;
-	std::string				_mode;
+	unsigned char			_mode;
 	int						_skFd;
 	ClientState				_state;
 	std::vector<Channel*>	_channels;
@@ -34,7 +34,8 @@ public:
 	std::string				get_user(void) const;
 	std::string				get_nick(void) const;
 	std::string				get_real(void) const;
-	std::string				get_mode(void) const;
+	unsigned char			get_mode(void) const;
+	std::string				get_mode_str(void) const;
 	int						get_skFd(void) const;
 	ClientState				get_state(void) const;
 	std::vector<Channel*>	get_channels(void) const;

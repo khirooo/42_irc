@@ -3,6 +3,7 @@
 Client::Client(int fd, std::string name)
 :
 _host(name),
+_mode(0),
 _usr("*"),
 _nick("*"),
 _real("*"),
@@ -33,10 +34,21 @@ std::string	Client::get_real(void) const
 	return _real;
 }
 
-std::string	Client::get_mode(void) const
+unsigned char	Client::get_mode(void) const
 {
 	return _mode;
 }
+
+std::string	Client::get_mode_str(void) const
+{
+	std::string	mode = "+";
+	if (_mode & 0b01)
+		mode += "i";
+	if (_mode & 0b10)
+		mode += "o";
+	return mode;
+}
+
 
 int			Client::get_skFd(void) const
 {
@@ -69,7 +81,23 @@ void		Client::set_real(std::string real)
 
 void		Client::set_mode(std::string mode)
 {
-	_mode = mode;
+	bool	add = true;
+
+	for (int i = 0; i < mode.size(); i++)
+	{
+		if (mode[i] == '-')
+			add = false;
+		else if (mode[i] == '+')
+			add = true;
+		else if (mode[i] == 'i' && add)
+			_mode |= 0b01;
+		else if (mode[i] == 'i' && !add)
+			_mode &= 0b10; //'10'
+		else if (mode[i] == 'o' && add)
+			_mode |= 0b10;
+		else if (mode[i] == 'o' && !add)
+			_mode &= 0b01;
+	}
 }
 
 void		Client::set_state(ClientState state)

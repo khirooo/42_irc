@@ -187,7 +187,7 @@ void	Server::handel_message(struct pollfd* pfds_arr, int i)
 			close_connection(pfds_arr, i);
 			break ;
 		}
-		vec = ft_split(_buffer);
+		vec = ft_split(_buffer, "\r\n");
 		for(int j = 0; j < vec.size(); j++)
 		{
 			m = new Message();
@@ -263,6 +263,12 @@ void	Server::handel_command(int socket, Message m)
 		reply = cmd_join(_clients[socket], m);
 	else if (cmd == "PART")
 		reply = cmd_part(_clients[socket], m);
+	else if (cmd == "NAMES")
+		reply = cmd_names(_clients[socket], m);
+	else if (cmd == "MODE")
+		reply = cmd_mode(_clients[socket], m);
+	else if (cmd == "TOPIC")
+		reply = cmd_topic(_clients[socket], m);
 	if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) == reply.size())
 		std::cout << "-->" << reply << "." << std::endl;
 	else if (!reply.empty())
@@ -271,12 +277,12 @@ void	Server::handel_command(int socket, Message m)
 
 bool	Server::check_msg(Message m)
 {
-	std::string	cmd_list[9] = {"PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "NOTICE", "QUIT", "KICK"};
+	std::string	cmd_list[12] = {"PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "NOTICE", "QUIT", "NAMES", "MODE", "TOPIC", "KICK"};
 
 	if (m.get_cmd() == "CAP" || m.get_cmd() == "PING")
 		return true;
 	//check if command exist
-	if (std::count(cmd_list, cmd_list + 9, m.get_cmd()) == 0)
+	if (std::count(cmd_list, cmd_list + 12, m.get_cmd()) == 0)
 	{
 		std::cerr << "nik mok ila hadi '"<< m.get_cmd() << "' command" << std::endl;
 		return false;
@@ -345,6 +351,46 @@ void		Server::send_to_channel(Client* client, Channel* channel, std::string repl
 			continue;
 		send_to_client(clients[i], reply);
 	}
+}
+
+std::string	Server::check_mode_usr(std::string	mode) const
+{
+	std::string	modes = "io";
+	std::string clean_mode;
+	bool		found = false;
+	for(int i = 0; i < mode.size(); i++)
+	{
+		if (mode[i] == '+' || mode[i] == '-')
+			clean_mode.push_back(mode[i]);
+		else if (modes.find(mode[i]) != std::string::npos && clean_mode.find(mode[i]) == std::string::npos)
+		{
+			clean_mode.push_back(mode[i]);
+			found = true;
+		}
+	}
+	if (found)
+		return clean_mode;
+	return "";
+}
+
+std::string	Server::check_mode_chan(std::string	mode) const
+{
+	std::string	modes = "tlm";
+	std::string clean_mode;
+	bool		found = false;
+	for(int i = 0; i < mode.size(); i++)
+	{
+		if (mode[i] == '+' || mode[i] == '-')
+			clean_mode.push_back(mode[i]);
+		else if (modes.find(mode[i]) != std::string::npos && clean_mode.find(mode[i]) == std::string::npos)
+		{
+			clean_mode.push_back(mode[i]);
+			found = true;
+		}
+	}
+	if (found)
+		return clean_mode;
+	return "";
 }
 
 // _________________________COMMANDS____________________________
@@ -510,7 +556,7 @@ std::string	Server::cmd_join(Client* client, Message& m)
 	send_to_channel(client, channel, reply);
 	reply = RPL_TOPIC(_host, client->get_nick(), channel_name, channel->get_topic());
 	send_to_client(client, reply);
-	reply = RPL_NAMREPLY(_host, client->get_nick(), channel_name) + channel->get_clients_nick();
+	reply = RPL_NAMREPLY(_host, client->get_nick(), channel_name) + channel->get_clients_nick(client);
 	send_to_client(client, reply);
 	reply = RPL_ENDOFNAMES(_host, client->get_nick(), channel_name);
 	send_to_client(client, reply);
@@ -526,5 +572,142 @@ std::string	Server::cmd_part(Client* client, Message& m)
 	send_to_channel(client, ch, reply);
 	client->part_channel(ch);
 	ch->remove_client(client);
+	return "";
+}
+
+std::string	Server::cmd_names(Client* client, Message& m)
+{
+	std::vector<std::string>	vec_channel = ft_split(m.get_params()[0].c_str(), ",");
+	Channel*	channel = get_channel(vec_channel[0]);
+	std::string reply = channel->get_clients_nick(client);
+	if (reply != "\r\n")
+	{
+		reply = RPL_NAMREPLY(_host, client->get_nick(), channel->get_name()) + reply;
+		send_to_client(client, reply);
+	}
+	reply = RPL_ENDOFNAMES(_host, client->get_nick(), channel->get_name());
+	send_to_client(client, reply);
+	return "";
+}
+
+std::string	Server::cmd_mode(Client* client, Message& m)
+{
+	std::string	dist = m.get_params()[0];
+	std::string mode;
+	if ( m.get_params().size() > 1)
+		mode = m.get_params()[1];
+	std::string	reply;
+	if (dist[0] == '#')
+	{
+		Channel*	channel = get_channel(dist);
+		if (channel == NULL)
+		{
+			reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
+			send_to_client(client, reply);
+		}
+		else if (mode == "") //get mode
+		{
+			reply = RPL_MODECHANNEL(_host, client->get_nick(), channel->get_name(), channel->get_mode_str());
+			send_to_client(client, reply);
+		}
+		else if (!channel->is_oper(client)) // check if moderator
+		{
+			reply = ERR_CANNOTSENDTOCHAN(_host, client->get_nick(), dist);
+			send_to_client(client, reply);
+		}
+		else
+		{
+			std::string	clean_mode;
+			clean_mode = check_mode_chan(mode);
+			std::cout << "clean: " <<  clean_mode << std::endl;
+			if (clean_mode == "")
+			{
+				reply = ERR_UMODEUNKNOWNFLAGCH(_host, client->get_nick());
+				send_to_client(client, reply);
+			}
+			else
+			{
+				channel->set_mode(clean_mode);
+				reply = RPL_MODECHANNEL(_host, client->get_nick(), channel->get_name(), channel->get_mode_str());
+				send_to_client(client, reply);
+				send_to_channel(client, channel, reply);
+			}
+		}
+	}
+	else
+	{
+		Client*	cl = get_client(dist);
+		if (cl == NULL)
+		{
+			std::string	reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
+			send_to_client(client, reply);
+		}
+		else if (client->get_nick() != dist)
+		{
+			reply = ERR_USERSDONTMATCH(_host, client->get_nick());
+			send_to_client(client, reply);
+		}
+		else if (mode == "")
+		{
+			reply = RPL_MODEUSER(_host, client->get_nick(), client->get_mode_str());
+			send_to_client(cl, reply);
+		}
+		else
+		{
+			std::string	clean_mode;
+			clean_mode = check_mode_usr(mode);
+			std::cout << "mode: '" << clean_mode << "'" << std::endl;
+			if (clean_mode == "")
+			{
+				reply = ERR_UMODEUNKNOWNFLAUSR(_host, client->get_nick());
+				send_to_client(client, reply);
+			}
+			else
+			{
+				client->set_mode(clean_mode);
+				reply = RPL_MODEUSER(_host, client->get_nick(), client->get_mode_str());
+				send_to_client(client, reply);
+			}
+		}
+	}
+	return "";
+}
+
+std::string	Server::cmd_topic(Client* client, Message& m)
+{
+	std::string topic;
+	std::string	dist = m.get_params()[0];
+	if ( m.get_params().size() > 1)
+		topic = m.get_params()[1];
+	Channel*	channel = get_channel(dist);
+	std::string reply;
+	if (channel == NULL)
+	{
+		reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
+		send_to_client(client, reply);
+	}
+	if (topic == "")
+	{
+		std::string chan_topic = channel->get_topic();
+		if (chan_topic == "")
+			reply = RPL_NOTOPIC(_host, client->get_nick(), channel->get_name());
+		else
+			reply = RPL_TOPIC(_host, client->get_nick(), channel->get_name(), channel->get_topic());
+		send_to_client(client, reply);
+		return "";
+	}
+	char mode = channel->get_mode();
+	if (((mode & 0b001) || (mode & 0b100)) && !channel->is_oper(client))
+	{
+		reply = ERR_CHANOPRIVSNEEDED(_host, client->get_nick(), channel->get_name());
+		send_to_client(client, reply);
+	}
+	else
+	{
+		channel->set_topic(topic);
+		reply = RPL_TOPICCHANGE(client->get_nick(), client->get_user(), client->get_host(), channel->get_name(), topic);
+		send_to_client(client, reply);
+		send_to_channel(client, channel, reply);
+	}
 	return "";
 }
