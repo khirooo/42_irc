@@ -110,6 +110,23 @@ void		Client::add_channel(Channel* channel)
 	_channels.push_back(channel);
 }
 
+void		Client::add_invite(Channel* channel)
+{
+	_invites.push_back(channel);
+}
+
+void		Client::remove_invite(Channel* channel)
+{
+	int	i;
+	for(i = 0; i < _invites.size(); i++)
+	{
+		if (_invites[i]->get_name() == channel->get_name())
+			break;
+	}
+	if (i != _invites.size())
+		_invites.erase(_invites.begin() + i);
+}
+
 void		Client::part_channel(Channel* channel)
 {
 	int	i;
@@ -118,7 +135,8 @@ void		Client::part_channel(Channel* channel)
 		if (_channels[i]->get_name() == channel->get_name())
 			break;
 	}
-	_channels.erase(_channels.begin() + i);
+	if (i != _channels.size())
+		_channels.erase(_channels.begin() + i);
 }
 
 bool	Client::in_channel(std::string channel)
@@ -127,6 +145,17 @@ bool	Client::in_channel(std::string channel)
 	for(i = 0; i < _channels.size(); i++)
 	{
 		if (_channels[i]->get_name() == channel)
+			return true;
+	}
+	return false;
+}
+
+bool	Client::is_invited(std::string channel) const
+{
+	int	i;
+	for(i = 0; i < _invites.size(); i++)
+	{
+		if (_invites[i]->get_name() == channel)
 			return true;
 	}
 	return false;

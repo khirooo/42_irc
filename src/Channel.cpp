@@ -23,7 +23,9 @@ unsigned char Channel::get_mode(void) const
 
 std::vector<Client*>	Channel::get_clients(void) const
 {
-	return _clients;
+	std::vector<Client*>	vec = _clients;
+	vec.insert(vec.begin(), _opers.begin(), _opers.end());
+	return vec;
 }
 
 std::string				Channel::get_topic(void) const
@@ -36,36 +38,64 @@ unsigned int	Channel::get_n_clients(void) const
 	return _clients.size();
 }
 
-std::string		Channel::get_clients_nick(Client* client) const
+std::string		Channel::get_clients_nick(Client* client, char mode) const
 {
 	std::string	clients_ls;
+	for(int i = 0; i < _opers.size(); i++)
+		if ((mode & 0b01) || !(_opers[i]->get_mode() & 0b01))
+			clients_ls += "@" + _opers[i]->get_nick() + " ";
 	for(int i = 0; i < _clients.size(); i++)
-		clients_ls += " " + _clients[i]->get_nick();
+		if ((mode & 0b01) || !(_clients[i]->get_mode() & 0b01))
+			clients_ls += _clients[i]->get_nick() + " ";
 	clients_ls += "\r\n";
 	return clients_ls;
 }
 
-void	Channel::set_mode(std::string mode)
+void	Channel::set_mode(std::string mode, Client* target)
 {
 	bool	add = true;
-	for (int i = 0; i < mode.size(); i++)
+
+	if (target != NULL)
 	{
-		if (mode[i] == '-')
-			add = false;
-		else if (mode[i] == '+')
-			add = true;
-		else if (mode[i] == 'm' && add)
-			_mode |= 0b001;
-		else if (mode[i] == 'm' && !add)
-			_mode &= 0b110;
-		else if (mode[i] == 'l' && add)
-			_mode |= 0b010;
-		else if (mode[i] == 'l' && !add)
-			_mode &= 0b101;
-		else if (mode[i] == 't' && add)
-			_mode |= 0b100;
-		else if (mode[i] == 't' && !add)
-			_mode &= 0b011;
+		for (int i = 0; i < mode.size(); i++)
+		{
+			if (mode[i] == '-')
+				add = false;
+			else if (mode[i] == '+')
+				add = true;
+			if (mode[i] == 'o' && add && !is_oper(target))
+			{
+				remove_client(target);
+				add_oper(target);
+			}
+			if (mode[i] == 'o' && !add && is_oper(target))
+			{
+				remove_oper(target);
+				add_client(target);
+			}
+		}
+	}
+	else
+	{
+		for (int i = 0; i < mode.size(); i++)
+		{
+			if (mode[i] == '-')
+				add = false;
+			else if (mode[i] == '+')
+				add = true;
+			else if (mode[i] == 'm' && add)
+				_mode |= 0b001;
+			else if (mode[i] == 'm' && !add)
+				_mode &= 0b110;
+			else if (mode[i] == 'i' && add)
+				_mode |= 0b010;
+			else if (mode[i] == 'i' && !add)
+				_mode &= 0b101;
+			else if (mode[i] == 't' && add)
+				_mode |= 0b100;
+			else if (mode[i] == 't' && !add)
+				_mode &= 0b011;
+		}
 	}
 }
 
@@ -75,7 +105,7 @@ std::string	Channel::get_mode_str(void) const
 	if (_mode & 0b001)
 		mode += "m";
 	if (_mode & 0b010)
-		mode += "l";
+		mode += "i";
 	if (_mode & 0b100)
 		mode += "t";
 	return mode;
@@ -104,18 +134,31 @@ void	Channel::remove_client(Client* client)
 		if (_clients[i]->get_skFd() == client->get_skFd())
 			break;
 	}
-	_clients.erase(_clients.begin() + i);
+	if (i != _clients.size())
+		_clients.erase(_clients.begin() + i);
 }
+
+void	Channel::remove_oper(Client* client)
+{
+	int i;
+	for (i = 0; i < _opers.size(); i++)
+	{
+		if (_opers[i]->get_skFd() == client->get_skFd())
+			break;
+	}
+	if (i != _opers.size())
+		_opers.erase(_opers.begin() + i);
+}
+
 
 bool	Channel::is_oper(Client* client) const
 {
-	return true;
-	// for(int i = 0; i < _opers.size(); i++)
-	// {
-	// 	if (_opers[i]->get_nick() == client->get_nick())
-	// 		return true;
-	// }
-	// return false;
+	for(int i = 0; i < _opers.size(); i++)
+	{
+		if (_opers[i]->get_nick() == client->get_nick())
+			return true;
+	}
+	return false;
 }
 
 /*--------debug stuff---------*/

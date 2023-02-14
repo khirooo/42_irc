@@ -45,7 +45,9 @@ public:
 	void					send_to_client(Client* client, std::string reply) const;
 	void					send_to_channel(Client* client, Channel* channel, std::string reply) const;
 	std::string				check_mode_usr(std::string mode) const;
-	std::string				check_mode_chan(std::string mode) const;
+	std::string				check_mode_chan(std::string mode, std::string target) const;
+	void					chan_mode(Client* client, Message& m, std::string dist, std::string moclientde);
+	void					user_mode(Client* client, Message& m, std::string dist, std::string mode);
 	// ALL SERVER COMMANDS (i may move this shit to a new class Command)
 	std::string	cmd_pass(Client* client, Message& m);
 	std::string	cmd_user(Client* client, Message& m);
@@ -57,6 +59,9 @@ public:
 	std::string	cmd_names(Client* client, Message& m);
 	std::string	cmd_mode(Client* client, Message& m);
 	std::string	cmd_topic(Client *client, Message& m);
+	std::string	cmd_kick(Client *client, Message& m);
+	std::string	cmd_invite(Client *client, Message& m);
+	std::string	cmd_oper(Client *client, Message& m);
 };
 
 #endif

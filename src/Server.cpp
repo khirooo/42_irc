@@ -18,7 +18,8 @@
 Server::Server(std::string pass, std::string port)
 :
 _port(port),
-_password(pass)
+_password(pass),
+_sudo("sudo")
 {
 	//add admin_user 
 	_clients.insert(std::map<int, Client*>::value_type(-1, new Client(-1, std::string("admin"))));
@@ -211,20 +212,12 @@ void	Server::close_connection(struct pollfd* pfds_arr, int i)
 	std::vector<Channel*>	channels = client->get_channels();
 	for (int i = 0; i < channels.size(); i++)
 	{
-		std::cout << "chan: " << channels[i]->get_name() << std::endl;
-		std::string	reply = RPL_QUIT(client->get_nick(), client->get_user(), 	client->get_host());
-		std::vector<Client*>	ch_cls = channels[i]->get_clients();
-		channels[i]->print_clients();
-		for (int j = 0; j < ch_cls.size(); j++)
-		{
-			if (ch_cls[j]->get_nick() == client->get_nick())
-				continue;
-			if (!reply.empty() && send(ch_cls[j]->get_skFd(), reply.c_str(), reply.size(), 0) == reply.size())
-				std::cout << "-->" << reply << "." << std::endl;
-			else if (!reply.empty())
-				std::cout << "i need to send the rest" << std::endl;
-		}
-		channels[i]->remove_client(client);
+		std::string	reply = RPL_QUIT(client->get_nick(), client->get_user(), client->get_host());
+		send_to_channel(client, channels[i], reply);
+		if (channels[i]->is_oper(client))
+			channels[i]->remove_oper(client);
+		else
+			channels[i]->remove_client(client);
 	}
 	close(pfds_arr[i].fd);
 	_clients.erase(pfds_arr[i].fd);
@@ -269,6 +262,12 @@ void	Server::handel_command(int socket, Message m)
 		reply = cmd_mode(_clients[socket], m);
 	else if (cmd == "TOPIC")
 		reply = cmd_topic(_clients[socket], m);
+	else if (cmd == "KICK")
+		reply = cmd_kick(_clients[socket], m);
+	else if (cmd == "INVITE")
+		reply = cmd_invite(_clients[socket], m);
+	else if (cmd == "OPER")
+		reply = cmd_oper(_clients[socket], m);
 	if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) == reply.size())
 		std::cout << "-->" << reply << "." << std::endl;
 	else if (!reply.empty())
@@ -277,12 +276,12 @@ void	Server::handel_command(int socket, Message m)
 
 bool	Server::check_msg(Message m)
 {
-	std::string	cmd_list[12] = {"PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "NOTICE", "QUIT", "NAMES", "MODE", "TOPIC", "KICK"};
+	std::string	cmd_list[14] = {"OPER", "PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "NOTICE", "QUIT", "NAMES", "MODE", "TOPIC", "KICK", "INVITE"};
 
 	if (m.get_cmd() == "CAP" || m.get_cmd() == "PING")
 		return true;
 	//check if command exist
-	if (std::count(cmd_list, cmd_list + 12, m.get_cmd()) == 0)
+	if (std::count(cmd_list, cmd_list + 14, m.get_cmd()) == 0)
 	{
 		std::cerr << "nik mok ila hadi '"<< m.get_cmd() << "' command" << std::endl;
 		return false;
@@ -355,7 +354,7 @@ void		Server::send_to_channel(Client* client, Channel* channel, std::string repl
 
 std::string	Server::check_mode_usr(std::string	mode) const
 {
-	std::string	modes = "io";
+	std::string	modes = "i";
 	std::string clean_mode;
 	bool		found = false;
 	for(int i = 0; i < mode.size(); i++)
@@ -373,9 +372,13 @@ std::string	Server::check_mode_usr(std::string	mode) const
 	return "";
 }
 
-std::string	Server::check_mode_chan(std::string	mode) const
+std::string	Server::check_mode_chan(std::string	mode, std::string target) const
 {
-	std::string	modes = "tlm";
+	std::string	modes;
+	if (target == "")
+		modes = "tim";
+	else
+		modes = "o";
 	std::string clean_mode;
 	bool		found = false;
 	for(int i = 0; i < mode.size(); i++)
@@ -441,6 +444,7 @@ std::string	Server::cmd_nick(Client* client, Message& m)
 		send_to_client(client, reply);
 		for (int i = 0; i < channels.size(); i++)
 			send_to_channel(client, channels[i], reply);
+		return "";
 	}
 	if (client->get_user() != "*")
 	{
@@ -478,12 +482,17 @@ std::string	Server::cmd_prvmsg(Client* client, Message& m)
 		Channel*	channel = get_channel(dist);
 		if (channel == NULL)
 		{
-			reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
+			reply = ERR_NOSUCHNICK(_host, client->get_nick(), dist);
 			send_to_client(client, reply);
 		}
 		else if (!client->in_channel(dist))
 		{
 			reply = ERR_CANNOTSENDTOCHAN(_host, client->get_nick(), dist);
+			send_to_client(client, reply);
+		}
+		else if ((channel->get_mode() & 0b001) && !channel->is_oper(client))
+		{
+			reply = ERR_CHANOPRIVSNEEDED(_host, client->get_nick(), dist);
 			send_to_client(client, reply);
 		}
 		else
@@ -517,7 +526,7 @@ std::string	Server::cmd_notice(Client* client, Message& m)
 	if (dist[0] == '#')
 	{
 		Channel*	channel = get_channel(dist);
-		if (channel && client->in_channel(dist))
+		if (channel && client->in_channel(dist) && (!(channel->get_mode() & 0b001) || channel->is_oper(client)))
 		{
 			reply = RPL_NOTICE(client->get_nick(), client->get_user(), client->get_host(), dist, msg);
 			send_to_channel(client, channel, reply);
@@ -538,6 +547,7 @@ std::string	Server::cmd_notice(Client* client, Message& m)
 std::string	Server::cmd_join(Client* client, Message& m)
 {
 	std::string channel_name = m.get_params()[0];
+	std::string	reply;
 	if (channel_name[0] != '#')
 		return ERR_NOSUCHCHANNEL(_host, client->get_nick(), channel_name);
 	if (client->in_channel(channel_name))
@@ -549,14 +559,24 @@ std::string	Server::cmd_join(Client* client, Message& m)
 		_channels.push_back(channel);
 		channel->add_oper(client);
 	}
-	channel->add_client(client);
+	else if ((channel->get_mode() & 0b010) && !client->is_invited(channel_name))
+	{
+		reply = ERR_INVITEONLYCHAN(_host, client->get_nick(), channel_name);
+		send_to_client(client, reply);
+		return "";
+	}
+	else
+		channel->add_client(client);
 	client->add_channel(channel);
-	std::string	reply = RPL_JOIN(client->get_nick(), client->get_user(), client->get_host(), channel_name);
+	reply = RPL_JOIN(client->get_nick(), client->get_user(), client->get_host(), channel_name);
 	send_to_client(client, reply);
 	send_to_channel(client, channel, reply);
-	reply = RPL_TOPIC(_host, client->get_nick(), channel_name, channel->get_topic());
-	send_to_client(client, reply);
-	reply = RPL_NAMREPLY(_host, client->get_nick(), channel_name) + channel->get_clients_nick(client);
+	if (channel->get_topic() != "")
+	{
+		reply = RPL_TOPIC(_host, client->get_nick(), channel_name, channel->get_topic());
+		send_to_client(client, reply);
+	}
+	reply = RPL_NAMREPLY(_host, client->get_nick(), channel_name) + channel->get_clients_nick(client, 0b01);
 	send_to_client(client, reply);
 	reply = RPL_ENDOFNAMES(_host, client->get_nick(), channel_name);
 	send_to_client(client, reply);
@@ -571,7 +591,11 @@ std::string	Server::cmd_part(Client* client, Message& m)
 	send_to_client(client, reply);
 	send_to_channel(client, ch, reply);
 	client->part_channel(ch);
-	ch->remove_client(client);
+	if (ch->is_oper(client))
+		ch->remove_oper(client);
+	else
+		ch->remove_client(client);
+	client->remove_invite(ch);
 	return "";
 }
 
@@ -579,7 +603,11 @@ std::string	Server::cmd_names(Client* client, Message& m)
 {
 	std::vector<std::string>	vec_channel = ft_split(m.get_params()[0].c_str(), ",");
 	Channel*	channel = get_channel(vec_channel[0]);
-	std::string reply = channel->get_clients_nick(client);
+	std::string reply;
+	if (client->in_channel(channel->get_name()))
+		reply = channel->get_clients_nick(client, 0b01);
+	else
+		reply = channel->get_clients_nick(client, 0b00);
 	if (reply != "\r\n")
 	{
 		reply = RPL_NAMREPLY(_host, client->get_nick(), channel->get_name()) + reply;
@@ -596,82 +624,100 @@ std::string	Server::cmd_mode(Client* client, Message& m)
 	std::string mode;
 	if ( m.get_params().size() > 1)
 		mode = m.get_params()[1];
-	std::string	reply;
 	if (dist[0] == '#')
+		chan_mode(client, m, dist, mode);
+	else
+		user_mode(client, m, dist, mode);
+	return "";
+}
+
+void	Server::chan_mode(Client* client, Message& m, std::string dist, std::string mode)
+{
+	Channel*	channel = get_channel(dist);
+	std::string	reply;
+	if (channel == NULL)
 	{
-		Channel*	channel = get_channel(dist);
-		if (channel == NULL)
-		{
-			reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
-			send_to_client(client, reply);
-		}
-		else if (mode == "") //get mode
-		{
-			reply = RPL_MODECHANNEL(_host, client->get_nick(), channel->get_name(), channel->get_mode_str());
-			send_to_client(client, reply);
-		}
-		else if (!channel->is_oper(client)) // check if moderator
-		{
-			reply = ERR_CANNOTSENDTOCHAN(_host, client->get_nick(), dist);
-			send_to_client(client, reply);
-		}
-		else
-		{
-			std::string	clean_mode;
-			clean_mode = check_mode_chan(mode);
-			std::cout << "clean: " <<  clean_mode << std::endl;
-			if (clean_mode == "")
-			{
-				reply = ERR_UMODEUNKNOWNFLAGCH(_host, client->get_nick());
-				send_to_client(client, reply);
-			}
-			else
-			{
-				channel->set_mode(clean_mode);
-				reply = RPL_MODECHANNEL(_host, client->get_nick(), channel->get_name(), channel->get_mode_str());
-				send_to_client(client, reply);
-				send_to_channel(client, channel, reply);
-			}
-		}
+		reply = ERR_NOSUCHNICK(_host, client->get_nick(), dist);
+		send_to_client(client, reply);
+		return ;
+	}
+	if (mode == "") //get mode
+	{
+		reply = RPL_MODECHANNEL(_host, client->get_nick(), channel->get_name(), channel->get_mode_str());
+		send_to_client(client, reply);
+		return ;
+	}
+	if (!channel->is_oper(client))
+	{
+		reply = ERR_CHANOPRIVSNEEDED(_host, client->get_nick(), dist);
+		send_to_client(client, reply);
+		return ;
+	}
+	std::string	clean_mode;
+	std::string	target;
+	if (m.get_params().size() > 2)
+		target = m.get_params()[2];
+	clean_mode = check_mode_chan(mode, target);
+	if (clean_mode == "")
+	{
+		reply = ERR_UMODEUNKNOWNFLAGCH(_host, client->get_nick());
+		send_to_client(client, reply);
+		return ;
+	}
+	if (target != "")
+	{
+		Client* cl = get_client(target);
+		channel->set_mode(clean_mode, cl);
+		reply = RPL_MODECHAN(client->get_nick(), client->get_user(), client->get_host(), channel->get_name(), clean_mode, target);
+		send_to_client(client, reply);
+		send_to_channel(client, channel, reply);
 	}
 	else
 	{
-		Client*	cl = get_client(dist);
-		if (cl == NULL)
+		channel->set_mode(clean_mode, NULL);
+		reply = RPL_MODECHANNEL(_host, client->get_nick(), channel->get_name(), channel->get_mode_str());
+		send_to_client(client, reply);
+		send_to_channel(client, channel, reply);
+	}
+}
+
+void	Server::user_mode(Client* client, Message& m, std::string dist, std::string mode)
+{
+	Client*	cl = get_client(dist);
+	std::string	reply;
+	if (cl == NULL)
+	{
+		std::string	reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
+		send_to_client(client, reply);
+	}
+	else if (client->get_nick() != dist)
+	{
+		reply = ERR_USERSDONTMATCH(_host, client->get_nick());
+		send_to_client(client, reply);
+	}
+	else if (mode == "")
+	{
+		reply = RPL_MODEUSER(_host, client->get_nick(), client->get_mode_str());
+		send_to_client(cl, reply);
+	}
+	else
+	{
+		std::string	clean_mode;
+		clean_mode = check_mode_usr(mode);
+		if (clean_mode == "")
 		{
-			std::string	reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
+			reply = ERR_UMODEUNKNOWNFLAUSR(_host, client->get_nick());
 			send_to_client(client, reply);
-		}
-		else if (client->get_nick() != dist)
-		{
-			reply = ERR_USERSDONTMATCH(_host, client->get_nick());
-			send_to_client(client, reply);
-		}
-		else if (mode == "")
-		{
-			reply = RPL_MODEUSER(_host, client->get_nick(), client->get_mode_str());
-			send_to_client(cl, reply);
 		}
 		else
 		{
-			std::string	clean_mode;
-			clean_mode = check_mode_usr(mode);
-			std::cout << "mode: '" << clean_mode << "'" << std::endl;
-			if (clean_mode == "")
-			{
-				reply = ERR_UMODEUNKNOWNFLAUSR(_host, client->get_nick());
-				send_to_client(client, reply);
-			}
-			else
-			{
-				client->set_mode(clean_mode);
-				reply = RPL_MODEUSER(_host, client->get_nick(), client->get_mode_str());
-				send_to_client(client, reply);
-			}
+			client->set_mode(clean_mode);
+			reply = RPL_MODEUSER(_host, client->get_nick(), client->get_mode_str());
+			send_to_client(client, reply);
 		}
 	}
-	return "";
 }
+
 
 std::string	Server::cmd_topic(Client* client, Message& m)
 {
@@ -683,7 +729,7 @@ std::string	Server::cmd_topic(Client* client, Message& m)
 	std::string reply;
 	if (channel == NULL)
 	{
-		reply = ERR_NOTONCHANNEL(_host, client->get_nick(), dist);
+		reply = ERR_NOSUCHNICK(_host, client->get_nick(), dist);
 		send_to_client(client, reply);
 	}
 	if (topic == "")
@@ -709,5 +755,113 @@ std::string	Server::cmd_topic(Client* client, Message& m)
 		send_to_client(client, reply);
 		send_to_channel(client, channel, reply);
 	}
+	return "";
+}
+
+std::string	Server::cmd_kick(Client* client, Message& m)
+{
+	std::string	chan_name = m.get_params()[0];
+	std::string target = m.get_params()[1];
+	std::string	reply;
+
+	Channel* channel = get_channel(chan_name);
+	if (!channel)
+	{
+		reply = ERR_NOSUCHNICK(_host, client->get_nick(), chan_name);
+		send_to_client(client, reply);
+		return "";
+	}
+	if (!client->in_channel(chan_name))
+	{
+		reply = ERR_NOTONCHANNEL(_host, client->get_nick(), chan_name);
+		send_to_client(client, reply);
+		return "";
+	}
+	Client*	target_cl = get_client(target);
+	if (!target_cl)
+	{
+		reply = ERR_NOSUCHNICK(_host, client->get_nick(), target);
+		send_to_client(client, reply);
+		return "";
+	}
+	if (!channel->is_oper(client))
+	{
+		reply = ERR_CHANOPRIVSNEEDED(_host, client->get_nick(), chan_name);
+		send_to_client(client, reply);
+		return "";
+	}
+	if (!target_cl->in_channel(chan_name))
+	{
+		reply = ERR_USERNOTINCHANNEL(_host, client->get_nick(), target, chan_name);
+		send_to_client(client, reply);
+		return "";
+	}
+	reply = RPL_KICK(client->get_nick(), client->get_user(), client->get_host(), chan_name, target);
+	send_to_client(client, reply);
+	send_to_channel(client, channel, reply);
+	target_cl->part_channel(channel);
+	target_cl->remove_invite(channel);
+	if (channel->is_oper(target_cl))
+		channel->remove_oper(target_cl);
+	else
+		channel->remove_client(target_cl);
+	return "";
+}
+
+std::string	Server::cmd_invite(Client* client, Message& m)
+{
+	std::string	target = m.get_params()[0];
+	std::string chan_name = m.get_params()[1];
+	std::string	reply;
+
+	Client*	target_cl = get_client(target);
+	if (!target_cl)
+	{
+		reply = ERR_NOSUCHNICK(_host, client->get_nick(), target);
+		send_to_client(client, reply);
+		return "";
+	}
+	Channel* channel = get_channel(chan_name);
+	if (!channel)
+	{
+		reply = ERR_NOSUCHNICK(_host, client->get_nick(), chan_name);
+		send_to_client(client, reply);
+		return "";
+	}
+	if (!channel->is_oper(client))
+	{
+		reply = ERR_CHANOPRIVSNEEDED(_host, client->get_nick(), chan_name);
+		send_to_client(client, reply);
+		return "";
+	}
+	reply = RPL_INVITING(_host, client->get_nick(), target, chan_name);
+	send_to_client(client, reply);
+	reply = RPL_INVITE(client->get_nick(), client->get_user(), client->get_host(), target, chan_name);
+	send_to_client(target_cl, reply);
+	target_cl->add_invite(channel);
+	return "";
+}
+
+std::string	Server::cmd_oper(Client* client, Message& m)
+{
+	std::string	target = m.get_params()[0];
+	std::string pass = m.get_params()[1];
+	std::string	reply;
+	Client*	target_cl = get_client(target);
+	if (!target_cl)
+	{
+		reply = ERR_NOSUCHNICK(_host, client->get_nick(), target);
+		send_to_client(client, reply);
+		return "";
+	}
+	if (pass != _sudo)
+	{
+		reply = ERR_PASSWDMISMATCH(_host);
+		send_to_client(client, reply);
+		return "";
+	}
+	target_cl->set_mode("+o");
+	reply = RPL_YOUREOPER(_host);
+	send_to_client(target_cl, reply);
 	return "";
 }

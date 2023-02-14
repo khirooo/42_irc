@@ -26,6 +26,7 @@ private:
 	int						_skFd;
 	ClientState				_state;
 	std::vector<Channel*>	_channels;
+	std::vector<Channel*>	_invites;
 
 public:
 	Client(int fd, std::string name);
@@ -46,8 +47,11 @@ public:
 	void		set_mode(std::string mode);
 	void		set_state(ClientState state);
 	void		add_channel(Channel* channel);
+	void		add_invite(Channel* channel);
 	void		part_channel(Channel* channel);
+	void		remove_invite(Channel* channel);
 	bool		in_channel(std::string channel);
+	bool		is_invited(std::string channel) const;
 };
 
 

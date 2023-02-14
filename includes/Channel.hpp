@@ -15,6 +15,7 @@ private:
 	std::vector<Client*>	_clients;
 	std::vector<Client*>	_opers;
 	std::string				_topic;
+	unsigned int			_count;
 public:
 	Channel(const std::string name);
 	~Channel();
@@ -25,13 +26,14 @@ public:
 	std::vector<Client*>	get_clients(void) const;
 	std::string				get_topic(void) const;
 	unsigned int			get_n_clients(void) const;
-	std::string				get_clients_nick(Client* client) const;
+	std::string				get_clients_nick(Client* client, char mode) const;
 
-	void					set_mode(std::string mode);
+	void					set_mode(std::string mode, Client* target);
 	void					set_topic(std::string topic);
 	void					add_client(Client* client);
 	void					add_oper(Client* clinet);
 	void					remove_client(Client* client);
+	void					remove_oper(Client* client);
 	bool					is_oper(Client* client) const;
 
 	/*------debug stuff-----*/
