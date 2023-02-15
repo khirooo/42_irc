@@ -10,6 +10,7 @@
 /* might need to add \r\n at the end of each reply !*/
 
 //ERROR REPLIES
+#define	ERR_UNKNOWNCOMMAND(src, nick, command)						":" + src + " 421 " + nick + " " + command + " :Unknown command\r\n"
 #define ERR_NOTREGISTERED(source)									":" + source + " 451 " + ":You have not registered\r\n"
 #define ERR_ALREADYLOGEDIN(source)									":" + source + " 460 " ":Already logged in\r\n"
 #define ERR_ALREADYREGISTRED(source)								":" + source + " 462 " ":Already registered in\r\n"

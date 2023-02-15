@@ -1,43 +1,6 @@
---impliment NAMES (maybe list, help, topic)
-
-
-
----implimment OPEN & MODE---
-users
-
-	i ==>invisibale
-
-	o ==> operator
-
-channesl 
-
-	s =>secret (do not appear on LIST/NAMES)
-
-	t ==>topic (has a topic)
-
-	n ==>no external (cannot send shit if ur not joinned)
-
-	m ==>moderate (cannot send shit if ur not chanop)
-
-	k ==> u need key to joine 
-
-	i ==> invite only
-
-	I ==> invite exception (has a list of people who dont need to get invited) !!!!
-
-	b ==> bann (has a list of banned fuckers)
-
-	e ==> has lis of people who cannot be banned !!!!
-
-	l ==> limited number channel
-
-chan_users:
-
-	'@' and '+o' : rabha
-
-	'+' and '+v' : can still send messages even if the channel is moderated
-opers commands
-
-KILL
-DIE
-Restart
+-----TO DO----
+ -much more testing
+ -free & close stuff
+ -check for leaks
+ -check_msg() is ugly
+ -impliment a Bot

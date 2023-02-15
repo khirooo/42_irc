@@ -38,13 +38,13 @@ unsigned int	Channel::get_n_clients(void) const
 	return _clients.size();
 }
 
-std::string		Channel::get_clients_nick(Client* client, char mode) const
+std::string		Channel::get_clients_nick(char mode) const
 {
 	std::string	clients_ls;
-	for(int i = 0; i < _opers.size(); i++)
+	for(unsigned long i = 0; i < _opers.size(); i++)
 		if ((mode & 0b01) || !(_opers[i]->get_mode() & 0b01))
 			clients_ls += "@" + _opers[i]->get_nick() + " ";
-	for(int i = 0; i < _clients.size(); i++)
+	for(unsigned long i = 0; i < _clients.size(); i++)
 		if ((mode & 0b01) || !(_clients[i]->get_mode() & 0b01))
 			clients_ls += _clients[i]->get_nick() + " ";
 	clients_ls += "\r\n";
@@ -57,7 +57,7 @@ void	Channel::set_mode(std::string mode, Client* target)
 
 	if (target != NULL)
 	{
-		for (int i = 0; i < mode.size(); i++)
+		for (unsigned long i = 0; i < mode.size(); i++)
 		{
 			if (mode[i] == '-')
 				add = false;
@@ -77,7 +77,7 @@ void	Channel::set_mode(std::string mode, Client* target)
 	}
 	else
 	{
-		for (int i = 0; i < mode.size(); i++)
+		for (unsigned long i = 0; i < mode.size(); i++)
 		{
 			if (mode[i] == '-')
 				add = false;
@@ -128,7 +128,7 @@ void	Channel::add_oper(Client* client)
 
 void	Channel::remove_client(Client* client)
 {
-	int i;
+	unsigned long i;
 	for (i = 0; i < _clients.size(); i++)
 	{
 		if (_clients[i]->get_skFd() == client->get_skFd())
@@ -140,7 +140,7 @@ void	Channel::remove_client(Client* client)
 
 void	Channel::remove_oper(Client* client)
 {
-	int i;
+	unsigned long i;
 	for (i = 0; i < _opers.size(); i++)
 	{
 		if (_opers[i]->get_skFd() == client->get_skFd())
@@ -150,22 +150,12 @@ void	Channel::remove_oper(Client* client)
 		_opers.erase(_opers.begin() + i);
 }
 
-
 bool	Channel::is_oper(Client* client) const
 {
-	for(int i = 0; i < _opers.size(); i++)
+	for(unsigned long i = 0; i < _opers.size(); i++)
 	{
 		if (_opers[i]->get_nick() == client->get_nick())
 			return true;
 	}
 	return false;
-}
-
-/*--------debug stuff---------*/
-
-void	Channel::print_clients()
-{
-	for (int i = 0; i < _clients.size(); i++)
-		std::cout << _clients[i]->get_nick() << " ";
-	std::cout << std::endl;
 }

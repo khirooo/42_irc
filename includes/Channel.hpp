@@ -26,7 +26,7 @@ public:
 	std::vector<Client*>	get_clients(void) const;
 	std::string				get_topic(void) const;
 	unsigned int			get_n_clients(void) const;
-	std::string				get_clients_nick(Client* client, char mode) const;
+	std::string				get_clients_nick(char mode) const;
 
 	void					set_mode(std::string mode, Client* target);
 	void					set_topic(std::string topic);

@@ -3,10 +3,10 @@
 Client::Client(int fd, std::string name)
 :
 _host(name),
-_mode(0),
 _usr("*"),
 _nick("*"),
 _real("*"),
+_mode(0),
 _skFd(fd),
 _state(HANDSHAKE)
 {
@@ -83,7 +83,7 @@ void		Client::set_mode(std::string mode)
 {
 	bool	add = true;
 
-	for (int i = 0; i < mode.size(); i++)
+	for (int i = 0; i < (int)mode.size(); i++)
 	{
 		if (mode[i] == '-')
 			add = false;
@@ -118,31 +118,31 @@ void		Client::add_invite(Channel* channel)
 void		Client::remove_invite(Channel* channel)
 {
 	int	i;
-	for(i = 0; i < _invites.size(); i++)
+	for(i = 0; i < (int)_invites.size(); i++)
 	{
 		if (_invites[i]->get_name() == channel->get_name())
 			break;
 	}
-	if (i != _invites.size())
+	if (i != (int)_invites.size())
 		_invites.erase(_invites.begin() + i);
 }
 
 void		Client::part_channel(Channel* channel)
 {
 	int	i;
-	for(i = 0; i < _channels.size(); i++)
+	for(i = 0; i < (int)_channels.size(); i++)
 	{
 		if (_channels[i]->get_name() == channel->get_name())
 			break;
 	}
-	if (i != _channels.size())
+	if (i != (int)_channels.size())
 		_channels.erase(_channels.begin() + i);
 }
 
 bool	Client::in_channel(std::string channel)
 {
 	int	i;
-	for(i = 0; i < _channels.size(); i++)
+	for(i = 0; i < (int)_channels.size(); i++)
 	{
 		if (_channels[i]->get_name() == channel)
 			return true;
@@ -153,7 +153,7 @@ bool	Client::in_channel(std::string channel)
 bool	Client::is_invited(std::string channel) const
 {
 	int	i;
-	for(i = 0; i < _invites.size(); i++)
+	for(i = 0; i < (int)_invites.size(); i++)
 	{
 		if (_invites[i]->get_name() == channel)
 			return true;
