@@ -7,6 +7,7 @@
 #include <poll.h>
 #include <string>
 #include <cstdlib>
+#include <exception>
 
 #include "Client.hpp"
 #include "Message.hpp"
@@ -62,6 +63,27 @@ public:
 	std::string	cmd_kick(Client *client, Message& m);
 	std::string	cmd_invite(Client *client, Message& m);
 	std::string	cmd_oper(Client *client, Message& m);
+	std::string	cmd_kill(Client *client, Message& m);
+	std::string	cmd_die(Client *client, Message& m);
+	std::string	cmd_restart(Client *client, Message& m);
+
+	class ShutDownException: public std::exception
+	{
+		public:
+		const char * what() const throw()
+		{
+			return "Server is shutdow.";
+		}
+	};
+
+	class RestartException: public std::exception
+	{
+		public:
+		const char * what() const throw()
+		{
+			return "Server is restarting...";
+		}
+	};
 };
 
 #endif

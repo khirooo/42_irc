@@ -212,7 +212,7 @@ void	Server::close_connection(struct pollfd* pfds_arr, int i)
 	std::vector<Channel*>	channels = client->get_channels();
 	for (int i = 0; i < channels.size(); i++)
 	{
-		std::string	reply = RPL_QUIT(client->get_nick(), client->get_user(), client->get_host());
+		std::string	reply = RPL_QUIT(client->get_nick(), client->get_user(), client->get_host(), "QUIT :Client Quit");
 		send_to_channel(client, channels[i], reply);
 		if (channels[i]->is_oper(client))
 			channels[i]->remove_oper(client);
@@ -268,6 +268,12 @@ void	Server::handel_command(int socket, Message m)
 		reply = cmd_invite(_clients[socket], m);
 	else if (cmd == "OPER")
 		reply = cmd_oper(_clients[socket], m);
+	else if (cmd == "KILL")
+		reply = cmd_kill(_clients[socket], m);
+	else if (cmd == "DIE")
+		reply = cmd_die(_clients[socket], m);
+	else if (cmd == "RESTART")
+		reply = cmd_restart(_clients[socket], m);
 	if (!reply.empty() && send(socket, reply.c_str(), reply.size(), 0) == reply.size())
 		std::cout << "-->" << reply << "." << std::endl;
 	else if (!reply.empty())
@@ -276,12 +282,12 @@ void	Server::handel_command(int socket, Message m)
 
 bool	Server::check_msg(Message m)
 {
-	std::string	cmd_list[14] = {"OPER", "PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "NOTICE", "QUIT", "NAMES", "MODE", "TOPIC", "KICK", "INVITE"};
+	std::string	cmd_list[17] = {"OPER", "PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "NOTICE", "QUIT", "NAMES", "MODE", "TOPIC", "KICK", "KILL", "INVITE", "DIE", "RESTART"};
 
 	if (m.get_cmd() == "CAP" || m.get_cmd() == "PING")
 		return true;
 	//check if command exist
-	if (std::count(cmd_list, cmd_list + 14, m.get_cmd()) == 0)
+	if (std::count(cmd_list, cmd_list + 17, m.get_cmd()) == 0)
 	{
 		std::cerr << "nik mok ila hadi '"<< m.get_cmd() << "' command" << std::endl;
 		return false;
@@ -864,4 +870,78 @@ std::string	Server::cmd_oper(Client* client, Message& m)
 	reply = RPL_YOUREOPER(_host);
 	send_to_client(target_cl, reply);
 	return "";
+}
+
+std::string	Server::cmd_kill(Client* client, Message& m)
+{
+	std::string	target = m.get_params()[0];
+	std::string comment;
+	if (m.get_params().size() > 1)
+		comment = m.get_params()[1];
+	std::string	reply;
+	if (!(client->get_mode() & 0b10))
+	{
+		reply = ERR_NOPRIVILEGES(_host, "KILL");
+		send_to_client(client, reply);
+		return "";
+	}
+	Client*	target_cl = get_client(target);
+	if (!target_cl)
+	{
+		reply = ERR_NOSUCHNICK(_host, client->get_nick(), target);
+		send_to_client(client, reply);
+		return "";
+	}
+	std::vector<Channel*>	channels = target_cl->get_channels();
+	for (int i = 0; i < channels.size(); i++)
+	{
+		std::string	reply = RPL_QUIT(target_cl->get_nick(), client->get_user(), target_cl->get_host(), "QUIT : Killed by " + client->get_nick() + " (" + comment + ")");
+		send_to_channel(target_cl, channels[i], reply);
+		if (channels[i]->is_oper(target_cl))
+			channels[i]->remove_oper(target_cl);
+		else
+			channels[i]->remove_client(target_cl);
+	}
+	int	size = _pfds.size();
+	int	i = 0;
+	for (i = 0; i < size; i++)
+	{
+		if (_pfds[i].fd == target_cl->get_skFd())
+			break;
+	}
+	_clients.erase(target_cl->get_skFd());
+	if (i != size)
+		_pfds.erase(_pfds.begin() + i);
+	close(target_cl->get_skFd());
+	return ("");
+}
+
+std::string	Server::cmd_die(Client *client, Message& m)
+{
+	std::string	comment;
+	std::string	reply;
+	if (m.get_params().size() != 0)
+		comment = m.get_params()[0];
+	if (!(client->get_mode() & 0b10))
+	{
+		reply = ERR_NOPRIVILEGES(_host, "DIE");
+		send_to_client(client, reply);
+		return "";
+	}
+	throw ShutDownException();
+}
+
+std::string	Server::cmd_restart(Client *client, Message& m)
+{
+	std::string	comment;
+	std::string	reply;
+	if (m.get_params().size() != 0)
+		comment = m.get_params()[0];
+	if (!(client->get_mode() & 0b10))
+	{
+		reply = ERR_NOPRIVILEGES(_host, "RESTART");
+		send_to_client(client, reply);
+		return "";
+	}
+	throw RestartException();
 }

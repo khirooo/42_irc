@@ -36,3 +36,8 @@ chan_users:
 	'@' and '+o' : rabha
 
 	'+' and '+v' : can still send messages even if the channel is moderated
+opers commands
+
+KILL
+DIE
+Restart

@@ -28,6 +28,7 @@
 #define ERR_NOTONCHANNEL(src, nick, channel)						":" + src +  " 422 " + nick + " " + channel + " :You're not on that channel\r\n"
 #define ERR_USERNOTINCHANNEL(src, nick, target, channel)			":" + src +  " 441 " + nick + " " + target + " " + channel + " :They aren't on that channel\r\n"
 #define ERR_INVITEONLYCHAN(src, nick, channel)						":" + src + " 473 " + nick + " " + channel + " :Cannot join channel (+i) - you must be invited\r\n"
+#define	ERR_NOPRIVILEGES(src, cmd)										":" + src + " 481 " + cmd + " :Permission Denied- You're not an IRC operator\r\n"
 
 // NUMERIC REPLIES		
 #define	RPL_CAP(src)												":" + src + " CAP * LS :cap reply...\r\n"
@@ -47,7 +48,7 @@
 #define RPL_PART(src_nick, src_usr, src_host, channel)					":" + src_nick + "!" + src_usr + "@" + src_host + " PART " + channel + " :gonee... :'( \r\n"
 #define RPL_PRIVMSG(src_nick, src_usr, src_host, dis_nick, msg)			":" + src_nick + "!" + src_usr + "@" + src_host + " PRIVMSG " + dis_nick + " :" + msg + "\r\n"
 #define RPL_NOTICE(src_nick, src_usr, src_host, dis_nick, msg)			":" + src_nick + "!" + src_usr + "@" + src_host + " NOTICE " + dis_nick + " :" + msg + "\r\n"
-#define RPL_QUIT(src_nick, src_usr, src_host)							":" + src_nick + "!" + src_usr + "@" + src_host + " QUIT :Client Quit \r\n"
+#define RPL_QUIT(src_nick, src_usr, src_host, reason)							":" + src_nick + "!" + src_usr + "@" + src_host + " " + reason + "\r\n"
 #define RPL_TOPICCHANGE(src_nick, src_usr, src_host, channel, topic)	":" + src_nick + "!" + src_usr + "@" + src_host + " TOPIC " + channel + " :" + topic + "\r\n"
 #define RPL_MODECHAN(src_nick, src_usr, src_host, channel, mode, nick) 	":" + src_nick + "!" + src_usr + "@" + src_host + " MODE " + channel + " " + mode + " " + nick + "\r\n"
 #define RPL_KICK(src_nick, src_usr, src_host, channel, target)			":" + src_nick + "!" + src_usr + "@" + src_host + " KICK " + channel + " " + target + " :" + target + "\r\n"
