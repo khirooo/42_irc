@@ -187,7 +187,6 @@ void		Server::handel_message(struct pollfd* pfds_arr, int i)
 
 	memset(_buffer, 0, BUFFER_SIZE);
 	exit_code = recv(pfds_arr[i].fd, _buffer, BUFFER_SIZE, MSG_DONTWAIT);
-		std::cout << "fail happened" << std::endl;
 	if (exit_code <= 0) //connection closed or fail
 	{
 		if (exit_code == 0)
