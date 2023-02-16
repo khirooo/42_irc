@@ -171,12 +171,12 @@ void		Server::accept_connection(void)
 		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD) != 0)
 			std::cerr << "Error: getnameinfo " << errno << strerror(errno) << std::endl;
 	}
-	std::cout << "fail happened" << std::endl;
 	struct pollfd pfd;
 	pfd.fd = new_sock;
 	pfd.events = POLLIN;
 	_pfds.push_back(pfd);
 	_clients.insert(std::map<int, Client*>::value_type(new_sock, new Client(new_sock, std::string(name))));
+	std::cout << "fail happened" << std::endl;
 }
 
 void		Server::handel_message(struct pollfd* pfds_arr, int i)
