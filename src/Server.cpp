@@ -176,7 +176,6 @@ void		Server::accept_connection(void)
 	pfd.events = POLLIN;
 	_pfds.push_back(pfd);
 	_clients.insert(std::map<int, Client*>::value_type(new_sock, new Client(new_sock, std::string(name))));
-	std::cout << "fail happened" << std::endl;
 }
 
 void		Server::handel_message(struct pollfd* pfds_arr, int i)
@@ -186,7 +185,7 @@ void		Server::handel_message(struct pollfd* pfds_arr, int i)
 	Message					*m = NULL;
 	std::vector<std::string>	vec;
 
-
+	std::cout << "fail happened" << std::endl;
 	memset(_buffer, 0, BUFFER_SIZE);
 	exit_code = recv(pfds_arr[i].fd, _buffer, BUFFER_SIZE, MSG_DONTWAIT);
 	if (exit_code <= 0) //connection closed or fail
