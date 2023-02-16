@@ -147,6 +147,10 @@ void		Server::accept_connection(void)
 		std::cerr << "Error: accept " << std::strerror(errno) << std::endl;
 	else
 		std::cout << std::endl << "-new connection" << std::endl;
+	printf("client_addr: %p\n", (void *)&client_addr);
+	printf("client_len: %u\n", client_len);
+	printf("name: %p\n", (void *)name);
+	printf("name_len: %u\n", (unsigned int)sizeof(name));
 	if (new_sock != -1)
 	{
 		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD) != 0)
