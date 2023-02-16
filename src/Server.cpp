@@ -171,6 +171,7 @@ void		Server::accept_connection(void)
 		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD) != 0)
 			std::cerr << "Error: getnameinfo " << errno << strerror(errno) << std::endl;
 	}
+	std::cout << "fail happened" << std::endl;
 	struct pollfd pfd;
 	pfd.fd = new_sock;
 	pfd.events = POLLIN;
