@@ -150,7 +150,7 @@ void		Server::accept_connection(void)
 	if (new_sock != -1)
 	{
 		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD))
-			std::cerr << "Error resolving client host name" << std::endl;
+			std::cerr << "Error: getnameinfo " << strerror(errno) << std::endl;
 	}
 	struct pollfd pfd;
 	pfd.fd = new_sock;
