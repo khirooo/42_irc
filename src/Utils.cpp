@@ -15,9 +15,9 @@ std::vector<std::string>	ft_split(const char buffer[1000], std::string delim)
 			vec.push_back(std::string(p));
 		else
 			vec.push_back(std::string(p).append(delim));
-		//free(p);
 		p = strtok(NULL, delim.c_str());
 	}
+	free(copy);
 	return vec;
 }
 
