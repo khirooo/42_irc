@@ -151,6 +151,21 @@ void		Server::accept_connection(void)
 	printf("client_len: %u\n", client_len);
 	printf("name: %p\n", (void *)name);
 	printf("name_len: %u\n", (unsigned int)sizeof(name));
+	printf("client_addr.ss_family: %u\n", client_addr.ss_family);
+
+	if (client_addr.ss_family == AF_INET) {
+		struct sockaddr_in *client_addr_in = (struct sockaddr_in *)&client_addr;
+		printf("client_addr_in.sin_port: %u\n", ntohs(client_addr_in->sin_port));
+		printf("client_addr_in.sin_addr.s_addr: %u\n", ntohl(client_addr_in->sin_addr.s_addr));
+	}
+	else if (client_addr.ss_family == AF_INET6) 
+	{
+		struct sockaddr_in6 *client_addr_in6 = (struct sockaddr_in6 *)&client_addr;
+		char straddr[INET6_ADDRSTRLEN];
+		inet_ntop(AF_INET6, &(client_addr_in6->sin6_addr), straddr, INET6_ADDRSTRLEN);
+		printf("client_addr_in6.sin6_port: %u\n", ntohs(client_addr_in6->sin6_port));
+		printf("client_addr_in6.sin6_addr: %s\n", straddr);
+	}
 	if (new_sock != -1)
 	{
 		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD) != 0)
