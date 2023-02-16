@@ -149,7 +149,7 @@ void		Server::accept_connection(void)
 		std::cout << std::endl << "-new connection" << std::endl;
 	if (new_sock != -1)
 	{
-		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD))
+		if (getnameinfo((struct sockaddr*)&client_addr, client_len, name, sizeof(name), 0, 0, NI_NAMEREQD) != 0)
 			std::cerr << "Error: getnameinfo " << strerror(errno) << std::endl;
 	}
 	struct pollfd pfd;
