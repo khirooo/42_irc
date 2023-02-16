@@ -9,13 +9,12 @@ class Client;
 class	Channel
 {
 private:
-	
 	std::string				_name;
 	unsigned char			_mode;
 	std::vector<Client*>	_clients;
 	std::vector<Client*>	_opers;
 	std::string				_topic;
-	unsigned int			_count;
+
 public:
 	Channel(const std::string name);
 	~Channel();
@@ -35,9 +34,6 @@ public:
 	void					remove_client(Client* client);
 	void					remove_oper(Client* client);
 	bool					is_oper(Client* client) const;
-
-	/*------debug stuff-----*/
-	void	print_clients();
 };
 
 

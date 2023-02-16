@@ -7,7 +7,8 @@ int	main(void)
 	{
 		my_server.initilize();
 		my_server.start();
-		//free & close stuffß
+		my_server.clean_server();
+		sleep(2);
 	}
 	return 0;
 }

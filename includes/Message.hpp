@@ -10,7 +10,7 @@ class Message
 protected:
 	std::string					_msg; //the whole thing
 	std::string					_prefix;//starts with ':' followed by sender eg. :doctor!doctor@baz.example.org ...
-	std::string					_cmd; //1 word or 3digits (reply)
+	std::string					_cmd; //1 word
 	std::vector<std::string>	_params; //comand parameters
 	bool						_complete; //if the msg containe portion of the message and not all of it (it does not end with \r\n)
 public:
@@ -25,9 +25,6 @@ public:
 	std::string					get_cmd(void) const;
 	std::vector<std::string>	get_params(void) const;
 	bool						is_complete(void) const;
-	std::vector<Message>		split_msg(void)	const;
 };
-
-std::ostream&	operator<<(std::ostream& s, Message& m);
 
 #endif

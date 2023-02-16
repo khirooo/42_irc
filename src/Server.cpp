@@ -1,20 +1,5 @@
 #include "Server.hpp"
 
-
-#include <iostream>
-#include <cstring>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <cerrno>
-#include <cstring>
-#include <cstdio>
-#include <fcntl.h>
-#include <list>
-#include <algorithm>
-
 Server::Server(std::string pass, std::string port)
 :
 _port(port),
@@ -227,7 +212,7 @@ void		Server::close_connection(struct pollfd* pfds_arr, int i)
 	close(pfds_arr[i].fd);
 	_clients.erase(pfds_arr[i].fd);
 	_pfds.erase(_pfds.begin() + i);
-	free(client);
+	delete client;
 }
 
 void		Server::handel_command(int socket, Message m)
@@ -285,25 +270,6 @@ void		Server::handel_command(int socket, Message m)
 		cmd_restart(client, m);
 }
 
-bool		Server::check_msg(Message m)
-{
-	std::string	cmd_list[17] = {"OPER", "PASS", "NICK", "USER", "JOIN", "PART", "PRIVMSG", "NOTICE", "QUIT", "NAMES", "MODE", "TOPIC", "KICK", "KILL", "INVITE", "DIE", "RESTART"};
-
-	if (m.get_cmd() == "CAP" || m.get_cmd() == "PING")
-		return true;
-
-	if (std::count(cmd_list, cmd_list + 17, m.get_cmd()) == 0)
-		return false;
-
-	std::vector<std::string>	params = m.get_params();
-	for(std::vector<std::string>::iterator it = params.begin(); it != params.end(); it++)
-	{
-		if (*it == "")
-			return false;
-	}
-	return true;
-}
-
 bool		Server::nick_used(int id, std::string nick)
 {
 	std::map<int, Client*>::iterator	it;
@@ -335,69 +301,6 @@ Channel*	Server::get_channel(std::string name)
 			return *it;
 	}
 	return NULL;
-}
-
-void		Server::send_to_client(Client* client, std::string reply) const
-{
-	if (send(client->get_skFd(), reply.c_str(), reply.size(), 0) == (long)reply.size())
-		std::cout << "-->" << reply << "." << std::endl;
-	else
-		std::cout << "Error: send did not finish" << std::endl;
-}
-
-void		Server::send_to_channel(Client* client, Channel* channel, std::string reply) const
-{
-	std::vector<Client*>	clients = channel->get_clients();
-	for(int	i= 0; i < (int)clients.size(); i++)
-	{
-		if (clients[i]->get_nick() == client->get_nick())
-			continue;
-		send_to_client(clients[i], reply);
-	}
-}
-
-std::string	Server::check_mode_usr(std::string	mode) const
-{
-	std::string	modes = "i";
-	std::string clean_mode;
-	bool		found = false;
-	for(int i = 0; i < (int)mode.size(); i++)
-	{
-		if (mode[i] == '+' || mode[i] == '-')
-			clean_mode.push_back(mode[i]);
-		else if (modes.find(mode[i]) != std::string::npos && clean_mode.find(mode[i]) == std::string::npos)
-		{
-			clean_mode.push_back(mode[i]);
-			found = true;
-		}
-	}
-	if (found)
-		return clean_mode;
-	return "";
-}
-
-std::string	Server::check_mode_chan(std::string	mode, std::string target) const
-{
-	std::string	modes;
-	if (target == "")
-		modes = "tim";
-	else
-		modes = "o";
-	std::string clean_mode;
-	bool		found = false;
-	for(int i = 0; i < (int)mode.size(); i++)
-	{
-		if (mode[i] == '+' || mode[i] == '-')
-			clean_mode.push_back(mode[i]);
-		else if (modes.find(mode[i]) != std::string::npos && clean_mode.find(mode[i]) == std::string::npos)
-		{
-			clean_mode.push_back(mode[i]);
-			found = true;
-		}
-	}
-	if (found)
-		return clean_mode;
-	return "";
 }
 
 // _________________________COMMANDS____________________________
@@ -940,4 +843,21 @@ void		Server::cmd_restart(Client *client, Message& m)
 		return ;
 	}
 	state = RESTART;
+}
+
+void		Server::clean_server(void)
+{
+	//close shit
+	for(unsigned long i = 0; i < _pfds.size(); i++)
+		close(_pfds[i].fd);
+	_pfds.clear();
+
+	//free shit
+	std::map<int, Client*>::iterator it;
+	for (it = _clients.begin(); it != _clients.end(); ++it)
+		delete it->second;
+	_clients.clear();
+	for(unsigned long i = 0; i < _channels.size(); i++)
+		delete _channels[i];
+	_channels.clear();
 }

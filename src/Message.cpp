@@ -73,23 +73,3 @@ std::vector<std::string>	Message::get_params(void) const
 {
 	return _params;
 }
-
-std::vector<Message>	Message::split_msg(void) const
-{
-	std::istringstream in_stream(_msg.substr(0, _msg.size()));
-	std::vector<Message>	v;
-	return v;
-}
-
-std::ostream&	operator<<(std::ostream& s, Message& m)
-{
-	s << "--Message--" << std::endl << "  Prefix: " << m.get_prefix() << std::endl
-	<< "  Cmd: " << m.get_cmd() << std::endl << "Params: ";
-	
-	// for(std::vector<std::string>::iterator it = m.get_params().begin(); it != m.get_params().end(); it++)
-	// {
-	// 	s << *it << " ";
-	// }
-	// s << std::endl;
-	return s;
-}

@@ -1,5 +1,5 @@
 #include "Channel.hpp"
-#include <iostream>
+
 Channel::Channel(const std::string name)
 :
 _name(name),
