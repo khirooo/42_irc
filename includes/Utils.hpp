@@ -44,7 +44,7 @@
 #define	ERR_NOPRIVILEGES(src, cmd)										":" + src + " 481 " + cmd + " :Permission Denied- You're not an IRC operator\r\n"
 
 // NUMERIC REPLIES			
-#define RPL_WELCOME(src, nick, user, host)								":" + src + " 001 " + nick + " :Welcome to the ft_irc network " + nick + "!" + user + "@" + host + "\r\n"
+#define RPL_WELCOME(src, nick, user, host)								":" + src + " 001 " + nick + " :Welcome to the khiro_irc network " + nick + "!" + user + "@" + host + "\r\n"
 #define	RPL_TOPIC(src, nick, channel, topic)							":" + src + " 332 " + nick + " " + channel + " :" + topic + "\r\n"
 #define RPL_NOTOPIC(src, nick, channel)									":" + src + " 331 " + nick + " " + channel + " :No topic is set\r\n"
 #define	RPL_NAMREPLY(src, nick, channel)								":" + src + " 353 " + nick + " = " + channel + " :"
