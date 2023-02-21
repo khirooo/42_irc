@@ -76,6 +76,7 @@ void		Server::initilize(void)
 		}
 		break;
 	}
+	fcntl(_svrSk, F_SETFL, O_NONBLOCK);
 	freeaddrinfo(servAddr);
 	if (p == NULL)
 	{
@@ -190,10 +191,8 @@ void		Server::handel_message(struct pollfd* pfds_arr, int i)
 			m = NULL;
 		}
 	}
-	//@@@free vec
 	for (int j = 0; j < (int)m_vec.size(); j++)
 		handel_command(pfds_arr[i].fd, m_vec[j]);
-	//@@@free m_vec
 }
 
 void		Server::close_connection(struct pollfd* pfds_arr, int i)
@@ -268,6 +267,8 @@ void		Server::handel_command(int socket, Message m)
 		cmd_die(client, m);
 	else if (cmd == "RESTART")
 		cmd_restart(client, m);
+	else if (cmd == "QUIT")
+		cmd_quit(client, m);
 }
 
 bool		Server::nick_used(int id, std::string nick)
@@ -402,11 +403,16 @@ void		Server::cmd_prvmsg(Client* client, Message& m)
 	if (dist[0] == '#')
 	{
 		Channel*	channel = get_channel(dist);
+		if (msg == "!quot" && channel->get_mode() & 0b1000)
+		{
+			cmd_quot(client, channel);
+			return ;
+		}
 		if (channel == NULL)
 			send_to_client(client, ERR_NOSUCHNICK(_host, client->get_nick(), dist));
 		else if (!client->in_channel(dist))
 			send_to_client(client, ERR_CANNOTSENDTOCHAN(_host, client->get_nick(), dist));
-		else if ((channel->get_mode() & 0b001) && !channel->is_oper(client))
+		else if ((channel->get_mode() & 0b0001) && !channel->is_oper(client))
 			send_to_client(client, ERR_CHANOPRIVSNEEDED(_host, client->get_nick(), dist));
 		else
 			send_to_channel(client, channel, RPL_PRIVMSG(client->get_nick(), client->get_user(), client->get_host(), dist, msg));
@@ -464,12 +470,20 @@ void		Server::cmd_join(Client* client, Message& m)
 		channel = new Channel(channel_name);
 		_channels.push_back(channel);
 		channel->add_oper(client);
+		client->add_channel(channel);
+		std::string reply = RPL_JOIN(client->get_nick(), client->get_user(), client->get_host(), channel_name);
+		send_to_client(client, reply);
+		send_to_client(client, RPL_NAMREPLY(_host, client->get_nick(), channel_name) + channel->get_clients_nick(0b01));
+		send_to_client(client, RPL_ENDOFNAMES(_host, client->get_nick(), channel_name));
+		return ;
 	}
-	else if ((channel->get_mode() & 0b010) && !client->is_invited(channel_name))
+	if ((channel->get_mode() & 0b010) && !client->is_invited(channel_name))
+	{
 		send_to_client(client, ERR_INVITEONLYCHAN(_host, client->get_nick(), channel_name));
-	else
-		channel->add_client(client);
+		return ;
+	}
 	client->add_channel(channel);
+	channel->add_client(client);
 	std::string reply = RPL_JOIN(client->get_nick(), client->get_user(), client->get_host(), channel_name);
 	send_to_client(client, reply);
 	send_to_channel(client, channel, reply);
@@ -492,6 +506,11 @@ void		Server::cmd_part(Client* client, Message& m)
 	if (!ch)
 	{
 		send_to_client(client, ERR_NOSUCHCHANNEL(_host, client->get_nick(), ch_name));
+		return ;
+	}
+	if (!client->in_channel(ch_name))
+	{
+		send_to_client(client, ERR_NOTONCHANNEL(_host, client->get_nick(), ch_name));
 		return ;
 	}
 	std::string				reply = RPL_PART(client->get_nick(), client->get_user(), client->get_host(), ch_name);
@@ -800,7 +819,7 @@ void		Server::cmd_kill(Client* client, Message& m)
 	std::vector<Channel*>	channels = target_cl->get_channels();
 	for (int i = 0; i < (int)channels.size(); i++)
 	{
-		send_to_channel(target_cl, channels[i], RPL_QUIT(target_cl->get_nick(), client->get_user(), target_cl->get_host(), "QUIT : Killed by " + client->get_nick() + " (" + comment + ")"));
+		send_to_channel(target_cl, channels[i], RPL_QUIT(target_cl->get_nick(), target_cl->get_user(), target_cl->get_host(), "QUIT : Killed by " + client->get_nick() + " (" + comment + ")"));
 		if (channels[i]->is_oper(target_cl))
 			channels[i]->remove_oper(target_cl);
 		else
@@ -860,4 +879,37 @@ void		Server::clean_server(void)
 	for(unsigned long i = 0; i < _channels.size(); i++)
 		delete _channels[i];
 	_channels.clear();
+}
+
+void		Server::cmd_quit(Client* client, Message& m)
+{
+	std::string comment;
+	if (m.get_params().size() > 0)
+		comment = m.get_params()[0];
+	Client*	target_cl = client;
+	std::vector<Channel*>	channels = target_cl->get_channels();
+	for (int i = 0; i < (int)channels.size(); i++)
+	{
+		send_to_channel(target_cl, channels[i], RPL_QUIT(target_cl->get_nick(), target_cl->get_user(), target_cl->get_host(), "QUIT :" + comment));
+		if (channels[i]->is_oper(target_cl))
+			channels[i]->remove_oper(target_cl);
+		else
+			channels[i]->remove_client(target_cl);
+	}
+	int	size = _pfds.size();
+	int	i = 0;
+	for (i = 0; i < size; i++)
+	{
+		if (_pfds[i].fd == target_cl->get_skFd())
+			break;
+	}
+	_clients.erase(target_cl->get_skFd());
+	if (i != size)
+		_pfds.erase(_pfds.begin() + i);
+	close(target_cl->get_skFd());
+}
+
+void		Server::cmd_quot(Client* client, Channel* channel)
+{
+	send_to_client(client, RPL_QUOT(_host, channel->get_name(), get_random_quot()));
 }

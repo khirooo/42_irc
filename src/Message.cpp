@@ -41,7 +41,10 @@ void	Message::parse_msg(void)
 		if (param[0] == ':') {
 			std::string  tmp;
 			std::getline(in_stream, tmp, '\r');
-			_params.push_back(param.substr(1) + ' ' + tmp);
+			if (tmp.empty())
+				_params.push_back(param.substr(1));
+			else
+				_params.push_back(param.substr(1) + ' ' + tmp);
 			break;
 		}
 		if (!param.empty())

@@ -2,6 +2,7 @@
 #define	UTILS_HPP
 
 #include <cstdlib>
+#include <ctime>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -53,6 +54,8 @@
 #define	RPL_YOUREOPER(src)												":" + src + " 381 " + "PASS :You are now an IRC operator\r\n"
 #define RPL_MODEUSER(src, nick, mode)									":" + src + " 221 " + nick + " " + mode + "\r\n"
 #define RPL_MODECHANNEL(src, nick,channel, mode)						":" + src + " 324 " + nick + " " + channel + " " + mode + "\r\n"
+#define	RPL_QUOT(src, channel, quot)									":QUOTBOT!BOT@" + src + " NOTICE " + channel + " :" + quot + "\r\n"
+//MAKE IT A NOTICE
 
 // COMMAND REPLIES	
 #define	RPL_CAP(src)													":" + src + " CAP * LS :cap reply...\r\n"
@@ -68,6 +71,8 @@
 #define RPL_MODECHAN(src_nick, src_usr, src_host, channel, mode, nick) 	":" + src_nick + "!" + src_usr + "@" + src_host + " MODE " + channel + " " + mode + " " + nick + "\r\n"
 #define RPL_KICK(src_nick, src_usr, src_host, channel, target)			":" + src_nick + "!" + src_usr + "@" + src_host + " KICK " + channel + " " + target + " :" + target + "\r\n"
 
+
+
 // HELPER FUNCTIONS
 std::vector<std::string>	ft_split(const char buffer[1000], std::string delim);
 std::string					check_mode_chan(std::string	mode, std::string target);
@@ -75,4 +80,5 @@ std::string					check_mode_usr(std::string	mode);
 bool						check_msg(Message m);
 void						send_to_client(Client* client, std::string reply);
 void						send_to_channel(Client* client, Channel* channel, std::string reply);
+std::string					get_random_quot(void);
 #endif

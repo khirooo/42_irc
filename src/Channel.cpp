@@ -1,9 +1,9 @@
 #include "Channel.hpp"
-
+#include <iostream>
 Channel::Channel(const std::string name)
 :
 _name(name),
-_mode(0b110)
+_mode(0b0110)
 {
 }
 
@@ -24,6 +24,7 @@ unsigned char Channel::get_mode(void) const
 std::vector<Client*>	Channel::get_clients(void) const
 {
 	std::vector<Client*>	vec = _clients;
+	std::cout << "nb clients = " << _clients.size() << std::endl;
 	vec.insert(vec.begin(), _opers.begin(), _opers.end());
 	return vec;
 }
@@ -95,6 +96,10 @@ void	Channel::set_mode(std::string mode, Client* target)
 				_mode |= 0b100;
 			else if (mode[i] == 't' && !add)
 				_mode &= 0b011;
+			else if (mode[i] == 'b' && add)
+				_mode |= 0b1000;
+			else if (mode[i] == 'b' && !add)
+				_mode &= 0b0111;
 		}
 	}
 }
@@ -102,12 +107,14 @@ void	Channel::set_mode(std::string mode, Client* target)
 std::string	Channel::get_mode_str(void) const
 {
 	std::string	mode = "+";
-	if (_mode & 0b001)
+	if (_mode & 0b0001)
 		mode += "m";
-	if (_mode & 0b010)
+	if (_mode & 0b0010)
 		mode += "i";
-	if (_mode & 0b100)
+	if (_mode & 0b0100)
 		mode += "t";
+	if (_mode & 0b1000)
+		mode += "b";
 	return mode;
 }
 

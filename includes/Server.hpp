@@ -71,6 +71,8 @@ public:
 	void	cmd_kill(Client *client, Message& m);
 	void	cmd_die(Client *client, Message& m);
 	void	cmd_restart(Client *client, Message& m);
+	void	cmd_quit(Client *client, Message& m);
+	void	cmd_quot(Client* clien, Channel* channel);
 };
 
 #endif
