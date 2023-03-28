@@ -41,6 +41,38 @@ std::string		check_mode_usr(std::string	mode)
 	return "";
 }
 
+bool	check_chan_name(std::string name)
+{
+	unsigned long	i;
+
+	for (i = 0; i < name.length(); i++)
+	{
+		if (static_cast<int>(name[i]) == 7 || name[i] == ',' || name[i] == 	' ')
+			return false;
+	}
+	if (i < 2 || i > 50)
+		return false;
+	if (name[0] != '#')
+		return false;
+	return true;
+}
+
+bool	check_nick_name(std::string name)
+{
+	unsigned long	i;
+
+	for (i = 0; i < name.length(); i++)
+	{
+		if (i == 0 && (name[i] < 'A' || name[i] > '}'))
+			return false;
+		if (i != 0 && !((name[i] >= 'A' && name [i] <= '}') || (name[i] >= '0' && name [i] <= '9') || name[i] == '-'))
+			return false;
+	}
+	if (i > 9)
+		return false;
+	return true;
+}
+
 std::string		check_mode_chan(std::string	mode, std::string target)
 {
 	std::string	modes;

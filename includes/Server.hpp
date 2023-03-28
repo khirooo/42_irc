@@ -39,7 +39,7 @@ private:
 public:
 
 	Status						state;
-	Server(std::string pass, std::string port = "6667");
+	Server(std::string pass, std::string port);
 	~Server();
 
 	void					initilize(void);

@@ -32,6 +32,7 @@
 #define ERR_NONICKNAMEGIVEN(source)										":" + source + " 431 " + "NICK" + " :Nickname not given\r\n"
 
 #define ERR_NICKNAMEINUSE(src, nick, used)								":" + src + " 433 " + nick + " " + used + " :Nickname is already in use\r\n"
+#define ERR_ERRONEUSNICKNAME(src, nick, err_nick)						":" + src + " 432 " + nick + " " + err_nick + " :Erroneous nickname\r\n"
 #define ERR_NOSUCHCHANNEL(src, nick, channel)							":" + src + " 403 " +  nick + " " + channel + " :No such channel\r\n"
 #define ERR_NOSUCHNICK(src, nick, channel)								":" + src + " 401 " + nick + " " + channel + " :No such nick/channel\r\n"
 #define ERR_CANNOTSENDTOCHAN(src, nick, channel)						":" + src +  " 404 " + nick + " " + channel + " :Cannot send to channel\r\n"
@@ -81,4 +82,6 @@ bool						check_msg(Message m);
 void						send_to_client(Client* client, std::string reply);
 void						send_to_channel(Client* client, Channel* channel, std::string reply);
 std::string					get_random_quot(void);
+bool						check_chan_name(std::string name);
+bool						check_nick_name(std::string name);
 #endif

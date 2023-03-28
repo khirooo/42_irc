@@ -343,6 +343,11 @@ void		Server::cmd_nick(Client* client, Message& m)
 	}
 	if (client->get_nick() == param[0])
 		return ;
+	if (!check_nick_name(param[0]))
+	{
+		send_to_client(client, ERR_ERRONEUSNICKNAME(_host, client->get_nick(), param[0]));
+		return;
+	}
 	if (nick_used(client->get_skFd(), param[0]))
 	{
 		send_to_client(client, ERR_NICKNAMEINUSE(_host, client->get_nick(), param[0]));
@@ -457,7 +462,7 @@ void		Server::cmd_join(Client* client, Message& m)
 		return ;
 	}
 	std::string channel_name = m.get_params()[0];
-	if (channel_name[0] != '#')
+	if (!check_chan_name(channel_name))
 	{
 		send_to_client(client, ERR_NOSUCHCHANNEL(_host, client->get_nick(), channel_name));
 		return ;

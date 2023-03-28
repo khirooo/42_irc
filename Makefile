@@ -1,4 +1,4 @@
-NAME	=	server
+NAME	=	ircserv
 
 CC		=	g++
 INCLUDES	=	./includes
