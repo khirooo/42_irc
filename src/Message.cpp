@@ -76,3 +76,12 @@ std::vector<std::string>	Message::get_params(void) const
 {
 	return _params;
 }
+
+void		Message::clear(void)
+{
+	_msg = "";
+	_prefix = "";
+	_cmd = "";
+	_params.clear();
+	_complete = false;
+}

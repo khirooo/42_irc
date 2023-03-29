@@ -165,8 +165,9 @@ void		Server::handel_message(struct pollfd* pfds_arr, int i)
 {
 	int	exit_code;
 	std::vector<Message>	m_vec;
-	Message					*m = NULL;
+	//Message					*m = NULL;
 	std::vector<std::string>	vec;
+	Client* client = _clients[pfds_arr[i].fd];
 
 	memset(_buffer, 0, BUFFER_SIZE);
 	exit_code = recv(pfds_arr[i].fd, _buffer, BUFFER_SIZE, MSG_DONTWAIT);
@@ -182,13 +183,12 @@ void		Server::handel_message(struct pollfd* pfds_arr, int i)
 	vec = ft_split(_buffer, "\r\n");
 	for(int j = 0; j < (int)vec.size(); j++)
 	{
-		m = new Message();
-		m->append(vec[j].c_str());
-		m_vec.push_back(*m);
-		if (m->is_complete())
+		// m = new Message();
+		client->get_msg().append(vec[j].c_str());
+		if (client->get_msg().is_complete())
 		{
-			delete m;
-			m = NULL;
+			m_vec.push_back(client->get_msg());
+			client->get_msg().clear();
 		}
 	}
 	for (int j = 0; j < (int)m_vec.size(); j++)
@@ -226,7 +226,6 @@ void		Server::handel_command(int socket, Message m)
 		send_to_client(client, ERR_UNKNOWNCOMMAND(_host, client->get_nick(), cmd));
 		return ;
 	}
-	
 	if (cmd == "PASS")
 		cmd_pass(client, m);
 	else if (client->get_state() == HANDSHAKE)

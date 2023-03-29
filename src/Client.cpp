@@ -64,6 +64,11 @@ std::vector<Channel*>	Client::get_channels(void) const
 	return _channels;
 }
 
+Message&	Client::get_msg(void)
+{
+	return _msg;
+}
+
 void		Client::set_user(std::string name)
 {
 	_usr = name;

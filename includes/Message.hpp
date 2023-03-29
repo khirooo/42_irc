@@ -25,6 +25,7 @@ public:
 	std::string					get_cmd(void) const;
 	std::vector<std::string>	get_params(void) const;
 	bool						is_complete(void) const;
+	void						clear(void);
 };
 
 #endif

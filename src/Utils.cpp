@@ -5,21 +5,38 @@ std::vector<std::string>	ft_split(const char buffer[1000], std::string delim)
 {
 	std::vector<std::string>	vec;
 
-	char *copy = (char *)malloc(strlen(buffer) + 1);
-	strcpy(copy, buffer);
-	char * p;
-	p = strtok(copy, delim.c_str()); 
-	while (p != NULL) 
+	std::string	input = buffer;
+	size_t pos = input.find(delim);
+	while (pos != std::string::npos)
 	{
-		if (delim == ",")
-			vec.push_back(std::string(p));
-		else
-			vec.push_back(std::string(p).append(delim));
-		p = strtok(NULL, delim.c_str());
+		vec.push_back(input.substr(0, pos + delim.length()));
+		input.erase(0, pos + delim.length());
+		pos = input.find(delim);
 	}
-	free(copy);
+	if (!input.empty())
+		vec.push_back(input);
 	return vec;
 }
+
+// std::vector<std::string>	ft_split(const char buffer[1000], std::string delim)
+// {
+// 	std::vector<std::string>	vec;
+
+// 	char *copy = (char *)malloc(strlen(buffer) + 1);
+// 	strcpy(copy, buffer);
+// 	char * p;
+// 	p = strtok(copy, delim.c_str()); 
+// 	while (p != NULL) 
+// 	{
+// 		if (delim == ",")
+// 			vec.push_back(std::string(p));
+// 		else
+// 			vec.push_back(std::string(p).append(delim));
+// 		p = strtok(NULL, delim.c_str());
+// 	}
+// 	free(copy);
+// 	return vec;
+// }
 
 std::string		check_mode_usr(std::string	mode)
 {

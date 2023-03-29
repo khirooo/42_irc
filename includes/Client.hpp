@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Channel.hpp"
+#include "Message.hpp"
 
 enum ClientState {
 	HANDSHAKE, 		// connected to the socket
@@ -25,6 +26,7 @@ private:
 	unsigned char			_mode;
 	int						_skFd;
 	ClientState				_state;
+	Message					_msg;
 	std::vector<Channel*>	_channels;
 	std::vector<Channel*>	_invites;
 
@@ -40,6 +42,7 @@ public:
 	int						get_skFd(void) const;
 	ClientState				get_state(void) const;
 	std::vector<Channel*>	get_channels(void) const;
+	Message&				get_msg(void);
 
 	void		set_user(std::string name);
 	void		set_nick(std::string nick);
@@ -53,8 +56,6 @@ public:
 	bool		in_channel(std::string channel);
 	bool		is_invited(std::string channel) const;
 };
-
-
 
 
 #endif
