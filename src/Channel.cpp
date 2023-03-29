@@ -24,7 +24,6 @@ unsigned char Channel::get_mode(void) const
 std::vector<Client*>	Channel::get_clients(void) const
 {
 	std::vector<Client*>	vec = _clients;
-	std::cout << "nb clients = " << _clients.size() << std::endl;
 	vec.insert(vec.begin(), _opers.begin(), _opers.end());
 	return vec;
 }

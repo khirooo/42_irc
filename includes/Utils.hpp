@@ -84,4 +84,6 @@ void						send_to_channel(Client* client, Channel* channel, std::string reply);
 std::string					get_random_quot(void);
 bool						check_chan_name(std::string name);
 bool						check_nick_name(std::string name);
+void						append_to_channel(Client* client, Channel* channel, std::string reply);
+bool						is_in(int fd, std::vector<struct pollfd>	pfds);
 #endif

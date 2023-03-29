@@ -8,7 +8,8 @@ _nick("*"),
 _real("*"),
 _mode(0),
 _skFd(fd),
-_state(HANDSHAKE)
+_state(HANDSHAKE),
+_msg_out("")
 {
 }
 
@@ -64,9 +65,19 @@ std::vector<Channel*>	Client::get_channels(void) const
 	return _channels;
 }
 
-Message&	Client::get_msg(void)
+Message&	Client::get_msg_in(void)
 {
-	return _msg;
+	return _msg_in;
+}
+
+std::string	Client::get_msg_out(void)
+{
+	return _msg_out;
+}
+
+void		Client::append_msg_out(std::string msg)
+{
+	_msg_out += msg;
 }
 
 void		Client::set_user(std::string name)
@@ -164,4 +175,9 @@ bool	Client::is_invited(std::string channel) const
 			return true;
 	}
 	return false;
+}
+
+void	Client::clear_buff(void)
+{
+	_msg_out.clear();
 }

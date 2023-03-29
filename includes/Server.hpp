@@ -73,6 +73,7 @@ public:
 	void	cmd_restart(Client *client, Message& m);
 	void	cmd_quit(Client *client, Message& m);
 	void	cmd_quot(Client* clien, Channel* channel);
+	void	send_to_fd(int fd);
 };
 
 #endif

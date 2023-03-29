@@ -133,26 +133,46 @@ bool		check_msg(Message m)
 	return true;
 }
 
-void		send_to_client(Client* client, std::string reply)
-{
-	if (send(client->get_skFd(), reply.c_str(), reply.size(), 0) == (long)reply.size())
-		std::cout << "-->" << reply << "." << std::endl;
-	else
-		std::cout << "Error: send did not finish" << std::endl;
-}
+// void		send_to_client(Client* client, std::string reply)
+// {
+// 	if (send(client->get_skFd(), reply.c_str(), reply.size(), 0) == (long)reply.size())
+// 		std::cout << "-->" << reply << "." << std::endl;
+// 	else
+// 		std::cout << "Error: send did not finish" << std::endl;
+// }
 
-void		send_to_channel(Client* client, Channel* channel, std::string reply)
+void		append_to_channel(Client* client, Channel* channel, std::string reply)
 {
 	std::vector<Client*>	clients = channel->get_clients();
 	for(int	i= 0; i < (int)clients.size(); i++)
 	{
-		std::cout << "in channel:" << clients[i]->get_nick() << std::endl;
 		if (clients[i]->get_nick() == client->get_nick())
 			continue;
-		send_to_client(clients[i], reply);
+		clients[i]->append_msg_out(reply);
 	}
 }
 
+// void		send_to_channel(Client* client, Channel* channel, std::string reply)
+// {
+// 	std::vector<Client*>	clients = channel->get_clients();
+// 	for(int	i= 0; i < (int)clients.size(); i++)
+// 	{
+// 		std::cout << "in channel:" << clients[i]->get_nick() << std::endl;
+// 		if (clients[i]->get_nick() == client->get_nick())
+// 			continue;
+// 		send_to_client(clients[i], reply);
+// 	}
+// }
+
+bool			is_in(int fd, std::vector<struct pollfd>	pfds)
+{
+	for (unsigned long i = 0; i < pfds.size(); i++)
+	{
+		if (pfds[i].fd == fd)
+			return true;
+	}
+	return false;
+}
 std::string		get_random_quot(void)
 {
 	std::vector<std::string>	quots_db;

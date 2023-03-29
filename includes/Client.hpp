@@ -26,7 +26,8 @@ private:
 	unsigned char			_mode;
 	int						_skFd;
 	ClientState				_state;
-	Message					_msg;
+	Message					_msg_in;
+	std::string				_msg_out;
 	std::vector<Channel*>	_channels;
 	std::vector<Channel*>	_invites;
 
@@ -42,8 +43,10 @@ public:
 	int						get_skFd(void) const;
 	ClientState				get_state(void) const;
 	std::vector<Channel*>	get_channels(void) const;
-	Message&				get_msg(void);
+	Message&				get_msg_in(void);
+	std::string				get_msg_out(void);
 
+	void		append_msg_out(std::string msg);
 	void		set_user(std::string name);
 	void		set_nick(std::string nick);
 	void		set_real(std::string real);
@@ -55,6 +58,7 @@ public:
 	void		remove_invite(Channel* channel);
 	bool		in_channel(std::string channel);
 	bool		is_invited(std::string channel) const;
+	void		clear_buff(void);
 };
 
 
