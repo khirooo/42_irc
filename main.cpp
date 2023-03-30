@@ -5,28 +5,20 @@ int	main(int argc, char **argv)
 	std::string	password;
 	std::string	port;
 
-	if (argc == 1)
+	if (argc != 2 && argc != 3)
+	{
+		write(STDOUT_FILENO, "Usage: ./ircserv [<port>] <password>\n", 37);//when dont touch c++ for a while :)
+		return 1;
+	}
+	if (argc == 2)
 	{
 		port = "6667";
-		password = "pass";
+		password = argv[1];
 	}
 	else
 	{
-		if (argc != 2 && argc != 3)
-		{
-			write(STDOUT_FILENO, "Usage: ./ircserv [<port>] <password>\n", 37);
-			return 1;
-		}
-		if (argc == 2)
-		{
-			port = "6667";
-			password = argv[1];
-		}
-		else
-		{
-			port = argv[1];
-			password = argv[2];
-		}
+		port = argv[1];
+		password = argv[2];
 	}
 	Server	my_server(password, port);
 	while (my_server.state == RESTART)
