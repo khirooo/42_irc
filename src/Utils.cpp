@@ -188,7 +188,9 @@ std::string		get_random_quot(void)
 	quots_db.push_back("“The road to success and the road to failure are almost exactly the same.” — Colin R");
 	quots_db.push_back("“Success usually comes to those who are too busy looking for it.” — Henry David Thoreau");
 	quots_db.push_back("“Develop success from failures. Discouragement and failure are two of the surest stepping stones to success.”—Dale Carnegie");
-
+	quots_db.push_back("“Ain't no sunshine when she's gone.” — Robel Kedida");
+	quots_db.push_back("“Fuck power points, there is no power in those points, and no points in those presentations.” — Akshay");
+	quots_db.push_back("“if someone tries to do smth funny let me talk” — Moad");
 	std::srand(std::time(0));
 	std::size_t index = std::rand() % quots_db.size();
 	return quots_db[index];

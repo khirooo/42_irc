@@ -160,7 +160,8 @@ void		Server::accept_connection(void)
 	pfd.fd = new_sock;
 	pfd.events = POLLIN | POLLOUT;
 	_pfds.push_back(pfd);
-	_clients.insert(std::map<int, Client*>::value_type(new_sock, new Client(new_sock, std::string(name))));
+	Client* client = new Client(new_sock, std::string(name));
+	_clients.insert(std::make_pair(new_sock, client));
 }
 
 void		Server::handel_message(struct pollfd* pfds_arr, int i)
@@ -211,8 +212,8 @@ void		Server::close_connection(struct pollfd* pfds_arr, int i)
 			channels[i]->remove_client(client);
 	}
 	close(pfds_arr[i].fd);
-	pfds_arr[i].fd = -1;
 	_clients.erase(pfds_arr[i].fd);
+	pfds_arr[i].fd = -1;
 	_pfds.erase(_pfds.begin() + i);
 	delete client;
 }
@@ -936,3 +937,4 @@ void		Server::send_to_fd(int fd)
 		std::cout << "Error: send did not finish" << std::endl;
 	client->clear_buff();
 }
+
