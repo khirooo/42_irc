@@ -431,7 +431,7 @@ void		Server::cmd_prvmsg(Client* client, Message& m)
 		if (cl == NULL)
 			client->append_msg_out(ERR_NOTONCHANNEL(_host, client->get_nick(), dist));
 		else
-			client->append_msg_out(RPL_PRIVMSG(client->get_nick(), client->get_user(), client->get_host(), cl->get_nick(), msg));
+			cl->append_msg_out(RPL_PRIVMSG(client->get_nick(), client->get_user(), client->get_host(), cl->get_nick(), msg));
 	}
 }
 
@@ -452,7 +452,7 @@ void		Server::cmd_notice(Client* client, Message& m)
 	{
 		Client*	cl = get_client(dist);
 		if (cl)
-			client->append_msg_out(RPL_NOTICE(client->get_nick(), client->get_user(), client->get_host(), cl->get_nick(), msg));
+			cl->append_msg_out(RPL_NOTICE(client->get_nick(), client->get_user(), client->get_host(), cl->get_nick(), msg));
 	}
 }
 
@@ -638,7 +638,7 @@ void		Server::user_mode(Client* client, std::string dist, std::string mode)
 	else if (client->get_nick() != dist)
 		client->append_msg_out(ERR_USERSDONTMATCH(_host, client->get_nick()));
 	else if (mode == "")
-		client->append_msg_out(RPL_MODEUSER(_host, client->get_nick(), client->get_mode_str()));
+		cl->append_msg_out(RPL_MODEUSER(_host, client->get_nick(), client->get_mode_str()));
 	else
 	{
 		std::string	clean_mode;
